@@ -1,884 +1,203 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Senses — Bird Song & Botanical Fragrance</title>
+<title>Senses — Biodiversity Explorer</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Josefin+Sans:wght@200;300;400&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond&family=Josefin+Sans&family=IM+Fell+English&display=swap" rel="stylesheet">
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
 <style>
-:root {
-  --dawn: #1a1428;
-  --dusk: #2d1f3d;
-  --twilight: #3d2952;
-  --gold: #c9a84c;
-  --gold-light: #e8c87a;
-  --petal: #d4748c;
-  --sage: #7aad8a;
-  --birch: #c8b89a;
-  --mist: #9ab5c2;
-  --cream: #f0ead8;
-  --leaf: #4a7a5a;
-  --blossom: #e8a0b4;
-  --sky-blue: #7ab8d4;
-  --amber: #d4944c;
+body { margin:0; font-family:serif; background:#1a1428; color:#f0ead8; }
+.hero { padding:20px; text-align:center; }
+.loc-input { padding:10px; width:260px; }
+button { padding:10px; cursor:pointer; }
+
+.layout {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  height: calc(100vh - 140px);
 }
 
-* { margin:0; padding:0; box-sizing:border-box; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  font-family: 'IM Fell English', Georgia, serif;
-  background: var(--dawn);
-  color: var(--cream);
-  min-height: 100vh;
-  overflow-x: hidden;
+#map {
+  height:100%;
 }
 
-/* === ANIMATED BACKGROUND === */
-.bg-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
+.grid {
+  overflow:auto;
+  padding:10px;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
 }
 
-.bg-gradient {
-  position: absolute;
-  inset: 0;
-  background: 
-    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(45,31,61,0.9) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 80% at 80% 90%, rgba(26,20,40,0.95) 0%, transparent 60%),
-    linear-gradient(160deg, #1a1428 0%, #2d1f3d 40%, #1a2830 100%);
+.card {
+  border:1px solid rgba(255,255,255,0.1);
+  padding:10px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.03);
 }
 
-.floating-particle {
-  position: absolute;
-  border-radius: 50%;
-  animation: floatUp linear infinite;
-  opacity: 0;
-}
+.tabs { text-align:center; margin:10px; }
+.tab { margin:5px; }
+.active { background:#c9a84c; }
 
-@keyframes floatUp {
-  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-  10% { opacity: 0.6; }
-  90% { opacity: 0.3; }
-  100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
-}
-
-/* === HERO === */
-.hero {
-  position: relative;
-  z-index: 10;
-  text-align: center;
-  padding: 80px 40px 60px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.hero-eyebrow {
-  font-family: 'Josefin Sans', sans-serif;
-  font-weight: 200;
-  font-size: 11px;
-  letter-spacing: 6px;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 20px;
-  animation: fadeIn 1.2s ease forwards;
-}
-
-.hero h1 {
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 300;
-  font-size: clamp(42px, 7vw, 80px);
-  line-height: 1.1;
-  color: var(--cream);
-  margin-bottom: 16px;
-  animation: fadeIn 1.4s ease forwards;
-}
-
-.hero h1 em {
-  font-style: italic;
-  color: var(--gold-light);
-}
-
-.hero-sub {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 17px;
-  color: var(--birch);
-  line-height: 1.7;
-  max-width: 520px;
-  margin: 0 auto 36px;
-  animation: fadeIn 1.6s ease forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* === LOCATION BAR === */
-.location-bar {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  animation: fadeIn 1.8s ease forwards;
-  margin-bottom: 16px;
-}
-
-.loc-input {
-  padding: 12px 22px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(201,168,76,0.3);
-  border-radius: 30px;
-  color: var(--cream);
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 13px;
-  letter-spacing: 1px;
-  outline: none;
-  width: 280px;
-  transition: all 0.3s;
-}
-.loc-input::placeholder { color: rgba(240,234,216,0.4); }
-.loc-input:focus { border-color: var(--gold); background: rgba(255,255,255,0.09); }
-
-.loc-btn {
-  padding: 12px 24px;
-  background: linear-gradient(135deg, rgba(201,168,76,0.3), rgba(201,168,76,0.15));
-  border: 1px solid rgba(201,168,76,0.5);
-  border-radius: 30px;
-  color: var(--gold-light);
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-.loc-btn:hover { background: rgba(201,168,76,0.25); border-color: var(--gold-light); }
-.loc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.loc-me-btn {
-  padding: 12px 16px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 30px;
-  color: var(--birch);
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-.loc-me-btn:hover { background: rgba(255,255,255,0.08); }
-
-.gbif-credit {
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(240,234,216,0.3);
-  text-align: center;
-  margin-bottom: 60px;
-}
-.gbif-credit a { color: rgba(201,168,76,0.5); text-decoration: none; }
-.gbif-credit a:hover { color: var(--gold); }
-
-/* === TAB NAV === */
-.tab-nav {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  justify-content: center;
-  gap: 0;
-  margin-bottom: 60px;
-}
-
-.tab-btn {
-  padding: 14px 40px;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(240,234,216,0.5);
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 11px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
-}
-
-.tab-btn:first-child { border-radius: 30px 0 0 30px; }
-.tab-btn:last-child { border-radius: 0 30px 30px 0; border-left: none; }
-
-.tab-btn.active-bird {
-  background: rgba(122,184,212,0.15);
-  border-color: rgba(122,184,212,0.4);
-  color: var(--sky-blue);
-}
-
-.tab-btn.active-plant {
-  background: rgba(122,173,138,0.15);
-  border-color: rgba(122,173,138,0.4);
-  color: var(--sage);
-}
-
-/* === GRID === */
-.species-section {
-  position: relative;
-  z-index: 10;
-  max-width: 1300px;
-  margin: 0 auto;
-  padding: 0 24px 100px;
-  display: none;
-}
-.species-section.visible { display: block; }
-
-.section-header {
-  text-align: center;
-  margin-bottom: 48px;
-}
-
-.section-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 300;
-  font-style: italic;
-  color: var(--cream);
-  margin-bottom: 8px;
-}
-
-.section-desc {
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 11px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: rgba(240,234,216,0.4);
-}
-
-.species-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-/* === SPECIES CARD === */
-.species-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
-  position: relative;
-  overflow: hidden;
-  animation: cardIn 0.5s ease forwards;
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-@keyframes cardIn {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.species-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, var(--card-accent-a, transparent) 0%, var(--card-accent-b, transparent) 100%);
-  opacity: 0;
-  transition: opacity 0.35s;
-  border-radius: inherit;
-}
-
-.species-card:hover { 
-  border-color: rgba(255,255,255,0.18);
-  transform: translateY(-4px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-}
-.species-card:hover::before { opacity: 1; }
-
-.card-rank {
-  position: absolute;
-  top: 16px;
-  right: 18px;
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 10px;
-  font-weight: 200;
-  letter-spacing: 2px;
-  color: rgba(240,234,216,0.25);
-}
-
-.card-icon {
-  font-size: 42px;
-  margin-bottom: 14px;
-  display: block;
-  line-height: 1;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
-  transition: transform 0.3s;
-}
-.species-card:hover .card-icon { transform: scale(1.1) rotate(-3deg); }
-
-.card-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--cream);
-  margin-bottom: 4px;
-  line-height: 1.2;
-}
-
-.card-latin {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 13px;
-  color: rgba(240,234,216,0.5);
-  margin-bottom: 12px;
-}
-
-.card-quality {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.quality-label {
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(240,234,216,0.4);
-}
-
-.quality-dots {
-  display: flex;
-  gap: 3px;
-}
-
-.qdot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  transition: background 0.3s;
-}
-.qdot.filled { background: var(--card-dot-color, var(--gold)); }
-
-.card-desc {
-  font-family: 'IM Fell English', serif;
-  font-size: 13.5px;
-  line-height: 1.65;
-  color: rgba(240,234,216,0.65);
-  margin-bottom: 14px;
-}
-
-.card-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-
-.ctag {
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 3px 10px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.06);
-  color: rgba(240,234,216,0.5);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-.card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
-
-.gbif-link {
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(201,168,76,0.5);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-.gbif-link:hover { color: var(--gold); }
-
-.occurrence-badge {
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 9px;
-  letter-spacing: 1px;
-  color: rgba(240,234,216,0.3);
-}
-.occurrence-badge.loaded { color: var(--sage); }
-
-/* === LOADING SPINNER === */
-.loader {
-  text-align: center;
-  padding: 60px 20px;
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 16px;
-  color: rgba(240,234,216,0.4);
-  letter-spacing: 1px;
-}
-
-.spinner-ring {
-  display: inline-block;
-  width: 32px;
-  height: 32px;
-  border: 2px solid rgba(201,168,76,0.2);
-  border-top-color: var(--gold);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* === LOCATION RESULTS BANNER === */
-.location-banner {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  padding: 14px 20px;
-  margin-bottom: 32px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 14px;
-  color: rgba(240,234,216,0.6);
-  display: none;
-}
-.location-banner.visible { display: flex; }
-.location-banner strong { color: var(--cream); font-style: normal; }
-
-/* === SOUND WAVE ANIM === */
-.sound-wave {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  height: 14px;
-  margin-left: 6px;
-  vertical-align: middle;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.species-card:hover .sound-wave { opacity: 1; }
-.wave-bar {
-  width: 2px;
-  border-radius: 2px;
-  background: var(--sky-blue);
-  animation: wave 0.8s ease-in-out infinite alternate;
-}
-.wave-bar:nth-child(2) { animation-delay: 0.15s; }
-.wave-bar:nth-child(3) { animation-delay: 0.3s; }
-.wave-bar:nth-child(4) { animation-delay: 0.15s; }
-@keyframes wave {
-  from { height: 3px; }
-  to { height: 12px; }
-}
-
-/* === SCENT PARTICLES === */
-.scent-dots {
-  display: inline-flex;
-  gap: 3px;
-  margin-left: 6px;
-  vertical-align: middle;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.species-card:hover .scent-dots { opacity: 1; }
-.scent-dot {
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: var(--sage);
-  animation: scentFloat 1.5s ease-in-out infinite;
-}
-.scent-dot:nth-child(2) { animation-delay: 0.3s; width: 3px; height: 3px; }
-.scent-dot:nth-child(3) { animation-delay: 0.6s; width: 5px; height: 5px; }
-@keyframes scentFloat {
-  0%, 100% { transform: translateY(0); opacity: 0.8; }
-  50% { transform: translateY(-6px); opacity: 0.3; }
-}
-
-/* === TOAST === */
 .toast {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  background: rgba(26,20,40,0.96);
-  border: 1px solid rgba(201,168,76,0.3);
-  color: var(--cream);
-  padding: 10px 22px;
-  border-radius: 20px;
-  font-family: 'Josefin Sans', sans-serif;
-  font-size: 11px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  z-index: 9999;
-  opacity: 0;
-  transition: all 0.3s;
-  pointer-events: none;
+  position:fixed; bottom:20px; left:50%;
+  transform:translateX(-50%);
+  background:#000; padding:10px 20px;
+  opacity:0; transition:0.3s;
 }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-@media (max-width: 600px) {
-  .hero { padding: 60px 20px 40px; }
-  .loc-input { width: 100%; }
-  .tab-btn { padding: 12px 22px; font-size: 10px; letter-spacing: 2px; }
-  .species-grid { grid-template-columns: 1fr; }
-}
+.toast.show { opacity:1; }
 </style>
 </head>
+
 <body>
 
-<!-- ANIMATED BACKGROUND -->
-<div class="bg-canvas">
-  <div class="bg-gradient"></div>
-</div>
-
-<!-- HERO -->
 <div class="hero">
-  <div class="hero-eyebrow">A Sensory Field Guide · Powered by GBIF</div>
-  <h1>The <em>Songs</em> &<br>The <em>Scents</em></h1>
-  <p class="hero-sub">Thirty birds whose voices soothe the soul. Thirty plants whose fragrance lingers in memory. Real species, real places — drawn from the world's largest biodiversity database.</p>
+  <h2>Biodiversity Explorer</h2>
 
-  <div class="location-bar">
-    <input type="text" class="loc-input" id="loc-input" placeholder="Search a place to find local species…" onkeydown="if(event.key==='Enter') searchLocation()">
-    <button class="loc-btn" id="loc-btn" onclick="searchLocation()">Find Near Me</button>
-    <button class="loc-me-btn" onclick="useGPS()" title="Use my location">📍</button>
-  </div>
-  <div class="gbif-credit">Occurrence data via <a href="https://www.gbif.org" target="_blank">GBIF.org</a> · Global Biodiversity Information Facility</div>
+  <input id="loc" class="loc-input" placeholder="Search location">
+  <button onclick="search()">Search</button>
+  <button onclick="gps()">📍</button>
 </div>
 
-<!-- TAB NAV -->
-<div class="tab-nav">
-  <button class="tab-btn active-bird" id="tab-bird" onclick="switchTab('bird')">🎵 &nbsp;Soothing Bird Songs</button>
-  <button class="tab-btn" id="tab-plant" onclick="switchTab('plant')">🌸 &nbsp;Fragrant Plants</button>
+<div class="tabs">
+  <button class="tab active" onclick="setType('bird')">Birds</button>
+  <button class="tab" onclick="setType('plant')">Plants</button>
 </div>
 
-<!-- BIRD SECTION -->
-<div class="species-section visible" id="section-bird">
-  <div class="section-header">
-    <div class="section-title">Thirty Voices of the Dawn Chorus</div>
-    <div class="section-desc">Ranked by their restorative, meditative quality — from lullaby to ethereal</div>
-  </div>
-  <div class="location-banner" id="bird-location-banner">
-    <span>📍</span> <span id="bird-location-text">Showing local occurrence data for your area</span>
-  </div>
-  <div class="species-grid" id="bird-grid"></div>
+<div class="layout">
+  <div id="map"></div>
+  <div class="grid" id="grid"></div>
 </div>
 
-<!-- PLANT SECTION -->
-<div class="species-section" id="section-plant">
-  <div class="section-header">
-    <div class="section-title">Thirty Perfumes of the Natural World</div>
-    <div class="section-desc">From honeyed sweetness to resinous calm — each a poem written in scent</div>
-  </div>
-  <div class="location-banner" id="plant-location-banner">
-    <span>📍</span> <span id="plant-location-text">Showing local occurrence data for your area</span>
-  </div>
-  <div class="species-grid" id="plant-grid"></div>
-</div>
-
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
-// ============================================================
-// CURATED DATA — 30 Soothing Birds
-// ============================================================
-const BIRDS = [
-  { name:"Common Nightingale", latin:"Luscinia megarhynchos", emoji:"🐦", gbif_key:2492321, quality:5, season:"Spring nights", habitat:"Dense thicket", sound_quality:"Rich, complex phrases with liquid trills", tags:["nocturnal","migratory","woodland"], region:"Europe/Asia", description:"Widely held as the most beautiful songbird in the world. Its nocturnal cascades — liquid trills, bubbling phrases, rich whistles — have inspired poets from Keats to Coleridge. Hear it from hedgerows and dense scrub on warm May evenings.", scents:null },
-  { name:"Blackbird", latin:"Turdus merula", emoji:"🐦‍⬛", gbif_key:5789749, quality:5, season:"Dawn–dusk", habitat:"Gardens & woodland", sound_quality:"Mellow, fluting phrases", tags:["garden","year-round","urban"], region:"Worldwide", description:"The blackbird's unhurried, fluting song is the quintessential British dawn soundtrack. Each phrase is composed on the spot — inventive, melodic, never repeated. Often the last voice of dusk too.", scents:null },
-  { name:"Wood Thrush", latin:"Hylocichla mustelina", emoji:"🐦", gbif_key:2489897, quality:5, season:"Dawn", habitat:"Deciduous forest", sound_quality:"Bell-like ee-oh-lay flutes", tags:["forest","migratory","USA"], region:"North America", description:"In Eastern American forests, the wood thrush's clear, bell-like 'ee-oh-lay' carries through mist at first light. Its flute-like notes echo off cathedral trees in a way that stills the mind completely.", scents:null },
-  { name:"Song Thrush", latin:"Turdus philomelos", emoji:"🐦", gbif_key:5789758, quality:5, season:"Spring/Summer", habitat:"Gardens & parks", sound_quality:"Repeated melodic phrases", tags:["garden","migratory","Europe"], region:"Europe", description:"Unlike other thrushes, the song thrush repeats each musical phrase two or three times as if carefully teaching itself. Standing on a rooftop or treetop, it delivers one of the garden's most composed recitals.", scents:null },
-  { name:"Hermit Thrush", latin:"Catharus guttatus", emoji:"🐦", gbif_key:2489898, quality:5, season:"Twilight", habitat:"Mountain forest", sound_quality:"Ascending spiral phrases", tags:["forest","mountain","USA"], region:"North America", description:"Called America's greatest singer by many naturalists. Its song begins on a single note then spirals upward through ascending phrases — ethereal, meditative, like a flute played in a cathedral of pines.", scents:null },
-  { name:"European Robin", latin:"Erithacus rubecula", emoji:"🐦", gbif_key:2492295, quality:4, season:"All year", habitat:"Woodland edge", sound_quality:"Wistful silvery warbling", tags:["garden","winter-song","Europe"], region:"Europe", description:"The robin sings even through the dark of winter, a thin silvery warble that sounds wistful and intimate, like a song whispered to no one in particular. The only British bird that sings every month of the year.", scents:null },
-  { name:"Eurasian Wren", latin:"Troglodytes troglodytes", emoji:"🐦", gbif_key:2492276, quality:4, season:"Year-round", habitat:"Undergrowth", sound_quality:"Explosive trills, surprisingly loud", tags:["tiny","powerful","woodland"], region:"Europe/Asia", description:"Britain's smallest common bird produces its continent's loudest song relative to body size. A wren on a mossy stone, pumping out ten notes per second in crystalline cascades — it's an astonishing thing.", scents:null },
-  { name:"Chaffinch", latin:"Fringilla coelebs", emoji:"🐦", gbif_key:2493011, quality:4, season:"Spring", habitat:"Woodland & gardens", sound_quality:"Bright descending crescendo", tags:["garden","common","Europe"], region:"Europe", description:"The chaffinch's familiar song — an accelerating, descending rattle finishing in a flourish — is the most counted birdsong in Britain. Unassuming but cheerful, it's the warm-up act of the dawn chorus.", scents:null },
-  { name:"Golden Oriole", latin:"Oriolus oriolus", emoji:"🌟", gbif_key:2490143, quality:5, season:"Summer", habitat:"Tall woodland", sound_quality:"Rich tropical fluty whistle", tags:["rare","summer visitor","Europe"], region:"Europe/Asia", description:"The golden oriole's song sounds like it belongs in a tropical rainforest — a rich, liquid 'weela-weeoo' that carries through poplar canopies. Shockingly beautiful; shockingly rare to hear in Britain.", scents:null },
-  { name:"Skylark", latin:"Alauda arvensis", emoji:"🐦", gbif_key:2491576, quality:4, season:"Spring/Summer", habitat:"Open fields", sound_quality:"Continuous cascading warble", tags:["farmland","hovering","Europe"], region:"Europe/Asia", description:"Rising vertically on trembling wings into the sky, the skylark pours down an unbroken stream of liquid notes. Its song can last twenty minutes without pause — a meditation in sound from above.", scents:null },
-  { name:"Savi's Warbler", latin:"Locustella luscinioides", emoji:"🐦", gbif_key:2492441, quality:3, season:"Summer", habitat:"Reedbeds", sound_quality:"Reeling, mechanical trill", tags:["reedbed","rare","Europe"], region:"Europe", description:"A deeply meditative, insect-like reeling sound from deep in the reedbeds — the sound of stillness itself. Once heard on a quiet evening marsh, it becomes the sound of peace.", scents:null },
-  { name:"Yellowhammer", latin:"Emberiza citrinella", emoji:"🐦", gbif_key:2492849, quality:3, season:"Summer", habitat:"Hedgerows", sound_quality:"Wheezy phrase with drawn-out ending", tags:["farmland","hedgerow","Europe"], region:"Europe", description:"'A-little-bit-of-bread-and-no-cheese' — the yellowhammer's lazy, sun-drenched phrasing is the sound of a warm English afternoon. It sits on a wire and delivers the same unhurried line, over and over.", scents:null },
-  { name:"Reed Warbler", latin:"Acrocephalus scirpaceus", emoji:"🐦", gbif_key:2492441, quality:3, season:"Summer", habitat:"Reedbeds", sound_quality:"Churring, chattering babble", tags:["reedbed","migratory","Europe"], region:"Europe", description:"Invisible in the reeds, the reed warbler produces a softly churring babble — repetitive, rhythmic, like the reeds themselves speaking. The sound of a warm summer marsh at noon.", scents:null },
-  { name:"Willow Warbler", latin:"Phylloscopus trochilus", emoji:"🐦", gbif_key:2491959, quality:4, season:"Spring/Summer", habitat:"Woodland & scrub", sound_quality:"Cascading silvery descending scale", tags:["migratory","woodland","Europe"], region:"Europe/Africa", description:"A cascade of silvery notes descending gently like water over stones — perhaps the most beautiful simple song of any British bird. Each phrase falls through the scale with perfect grace.", scents:null },
-  { name:"Garden Warbler", latin:"Sylvia borin", emoji:"🐦", gbif_key:2492372, quality:4, season:"Summer", habitat:"Dense scrub", sound_quality:"Sustained mellow babbling", tags:["migratory","scrub","Europe"], region:"Europe/Africa", description:"The garden warbler sings in long, sustained, mellow paragraphs — a gentle, rolling babble without obvious structure. It's the most restful of all the warblers, like listening to a stream.", scents:null },
-  { name:"Common Cuckoo", latin:"Cuculus canorus", emoji:"🐦", gbif_key:2495889, quality:3, season:"Spring", habitat:"Woodland edge", sound_quality:"Iconic two-note call", tags:["migratory","iconic","Europe"], region:"Europe/Asia", description:"Nothing marks the arrival of a British spring quite like the first cuckoo call drifting across a valley. Two notes, perfectly timed, echoing through morning mist — a sound that has meant spring for ten thousand years.", scents:null },
-  { name:"Marsh Warbler", latin:"Acrocephalus palustris", emoji:"🐦", gbif_key:2492445, quality:4, season:"Summer", habitat:"Wetland margins", sound_quality:"Complex mimicry of 100+ species", tags:["migratory","mimic","Europe"], region:"Europe/Africa", description:"The marsh warbler memorises the songs of over a hundred African and European species and weaves them into its own continuous, endlessly inventive improvisation — the jazz musician of the bird world.", scents:null },
-  { name:"Blackcap", latin:"Sylvia atricapilla", emoji:"🐦", gbif_key:2492354, quality:5, season:"Spring/Summer", habitat:"Woodland", sound_quality:"Rich, loud, fluting phrases", tags:["migratory","woodland","Europe"], region:"Europe/Africa", description:"Sometimes called the 'northern nightingale', the blackcap's song rises in rich, confident phrases that warm in quality as the bird gets into its stride. The best performances are as complex as any classical composition.", scents:null },
-  { name:"Sedge Warbler", latin:"Acrocephalus schoenobaenus", emoji:"🐦", gbif_key:2492437, quality:3, season:"Spring/Summer", habitat:"Wetland scrub", sound_quality:"Scratchy, varied, exuberant", tags:["wetland","migratory","Europe"], region:"Europe/Africa", description:"From a perch on a bulrush, the sedge warbler delivers an exuberant, chattering jumble — scratchy and sweet by turns, endlessly variable. The soundtrack of a productive marshland morning.", scents:null },
-  { name:"Wood Pigeon", latin:"Columba palumbus", emoji:"🕊️", gbif_key:2495373, quality:4, season:"Year-round", habitat:"Woodland & gardens", sound_quality:"Drowsy five-note cooing", tags:["garden","common","Europe"], region:"Europe/Asia", description:"The wood pigeon's drowsy, five-note cooing is the most soporific sound in the British countryside. Heard on a warm afternoon through a window — 'take two coos, Taffy' — it is the sound of stillness itself.", scents:null },
-  { name:"Tawny Owl", latin:"Strix aluco", emoji:"🦉", gbif_key:2495260, quality:5, season:"Autumn/Winter", habitat:"Woodland", sound_quality:"Classic quavering hoot", tags:["nocturnal","woodland","Europe"], region:"Europe/Asia", description:"The tawny owl's resonant, trembling hoot through autumn woodland is one of nature's most atmospheric sounds. Heard at 2am from a warm bed — the quintessential wild voice of Britain at rest.", scents:null },
-  { name:"Little Owl", latin:"Athene noctua", emoji:"🦉", gbif_key:2495234, quality:3, season:"Dusk", habitat:"Farmland & orchards", sound_quality:"Mournful 'kiew' calls", tags:["farmland","dusk","Europe"], region:"Europe/Asia", description:"The little owl's mournful yelping call across a quiet evening orchard is curiously touching — not beautiful exactly, but deeply evocative of landscape and wildness.", scents:null },
-  { name:"Common Swift", latin:"Apus apus", emoji:"🐦", gbif_key:2236636, quality:3, season:"Summer", habitat:"Urban & open sky", sound_quality:"Screaming parties overhead", tags:["urban","aerial","Europe"], region:"Europe/Africa", description:"Swifts don't sing so much as scream — but their shrieking parties wheeling over summer rooftops on warm evenings carry a wild joy that's among the most uplifting sounds of the season.", scents:null },
-  { name:"Common Sandpiper", latin:"Actitis hypoleucos", emoji:"🐦", gbif_key:2475955, quality:3, season:"Summer", habitat:"Rocky riverbanks", sound_quality:"Piping 'twee-wee-wee'", tags:["riverside","migratory","Europe"], region:"Europe/Asia", description:"The common sandpiper's clean, piping calls along a clear Highland river, bobbing on a rock — the sound is as sparkling and fresh as the water itself.", scents:null },
-  { name:"Dipper", latin:"Cinclus cinclus", emoji:"🐦", gbif_key:2492208, quality:4, season:"Year-round", habitat:"Fast streams", sound_quality:"Clear, wren-like warbling song", tags:["upland","stream","Europe"], region:"Europe/Asia", description:"Standing on a midstream boulder, the dipper sings a clear, wren-like warble that blends perfectly with rushing water. Arguably the most perfectly placed song in nature — the sound and the setting are inseparable.", scents:null },
-  { name:"Pied Flycatcher", latin:"Ficedula hypoleuca", emoji:"🐦", gbif_key:2492282, quality:3, season:"Spring/Summer", habitat:"Oak woodland", sound_quality:"Simple, sweet trilling", tags:["migratory","woodland","Europe"], region:"Europe/Africa", description:"In western oak woods in May, the pied flycatcher's sweet, slightly melancholy phrases ring out from high branches. Simple but affecting — one of the quieter jewels of the spring chorus.", scents:null },
-  { name:"Chiffchaff", latin:"Phylloscopus collybita", emoji:"🐦", gbif_key:2491957, quality:3, season:"Spring/Summer", habitat:"Woodland", sound_quality:"Repeated own-name call", tags:["migratory","woodland","Europe"], region:"Europe/Africa", description:"The chiffchaff names itself — an endlessly repeated, cheerful 'chiff-chaff-chiff-chaff' that is usually the first sign that spring has truly returned. Reliable, optimistic, perfectly simple.", scents:null },
-  { name:"Treecreeper", latin:"Certhia familiaris", emoji:"🐦", gbif_key:2492239, quality:4, season:"Year-round", habitat:"Mature woodland", sound_quality:"Thin, descending silvery thread", tags:["woodland","specialist","Europe"], region:"Europe/Asia", description:"Spiralling up a bark trunk, the treecreeper produces a thread of silvery sound so thin it seems to come from nowhere and everywhere at once. Easy to miss; unforgettable once found.", scents:null },
-  { name:"Nuthatch", latin:"Sitta europaea", emoji:"🐦", gbif_key:2491888, quality:3, season:"Spring", habitat:"Mature woodland", sound_quality:"Loud, ringing 'tui-tui-tui'", tags:["woodland","acrobatic","Europe"], region:"Europe/Asia", description:"The nuthatch's loud, ringing calls carry through woodland with cheerful confidence — a bird that walks headfirst down trees and sings like it owns the forest. Bright, assured, invigorating.", scents:null },
-  { name:"Curlew", latin:"Numenius arquata", emoji:"🐦", gbif_key:2476212, quality:5, season:"Spring/Summer", habitat:"Upland moors", sound_quality:"Haunting rising bubbling call", tags:["upland","moorland","Europe"], region:"Europe/Asia", description:"The curlew's long, bubbling, rising call across a moorland or estuary at dusk is one of Britain's most haunting sounds — wild, lonely, and beautiful in a way that is almost unbearably moving.", scents:null },
-];
+const KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
 
-// ============================================================
-// CURATED DATA — 30 Fragrant Plants
-// ============================================================
-const PLANTS = [
-  { name:"Common Lilac", latin:"Syringa vulgaris", emoji:"💜", gbif_key:3172218, quality:5, season:"Spring", habitat:"Gardens & parks", scent_quality:"Sweet, powdery, nostalgic", tags:["garden","shrub","spring"], region:"Europe/Asia", description:"Lilac's heavy, powdery sweetness is the most nostalgic of all garden fragrances — a single whiff transports the senses to a childhood garden, a grandmother's path. Overwhelming at close range, perfect from a distance." },
-  { name:"Sweet Violet", latin:"Viola odorata", emoji:"💜", gbif_key:3033952, quality:5, season:"Early spring", habitat:"Woodland edge", scent_quality:"Delicate, ionone-rich, fleeting", tags:["wildflower","woodland","spring"], region:"Europe", description:"The sweet violet's scent is famous for temporarily disabling your sense of smell — you catch it, lose it, catch it again. This teasing quality, combined with its tenderness, makes it one of the most prized of all floral perfumes." },
-  { name:"English Lavender", latin:"Lavandula angustifolia", emoji:"🪻", gbif_key:3172453, quality:5, season:"Summer", habitat:"Gardens & chalk downland", scent_quality:"Clean, camphorous, calming", tags:["herb","mediterranean","garden"], region:"Mediterranean", description:"Lavender's clean, slightly medicinal sweetness is the defining scent of English summer. Running your hand through a hedge of it releases a cloud of calm — clinically proven to reduce anxiety and improve sleep." },
-  { name:"Common Honeysuckle", latin:"Lonicera periclymenum", emoji:"🌸", gbif_key:3172678, quality:5, season:"Summer evenings", habitat:"Hedgerows & woodland edge", scent_quality:"Intensely sweet, strongest at night", tags:["climber","hedgerow","wildlife"], region:"Europe", description:"Honeysuckle saves its best performance for dusk, when its vanilla-sweet fragrance billows out through warm evening air to attract moths. Catching it unexpectedly while walking a country lane is one of summer's great pleasures." },
-  { name:"Sweet Briar Rose", latin:"Rosa rubiginosa", emoji:"🌹", gbif_key:3032827, quality:4, season:"Spring/Summer", habitat:"Hedgerows & scrub", scent_quality:"Apple-scented leaves, classic rose flower", tags:["wildflower","hedgerow","rose"], region:"Europe", description:"Uniquely, it is the leaves that smell most strongly of apple and honey in the sweet briar — released when brushed or after rain. The flowers are soft pink, the whole plant a gift to the senses." },
-  { name:"Common Meadowsweet", latin:"Filipendula ulmaria", emoji:"🌼", gbif_key:3036568, quality:4, season:"Summer", habitat:"Wet meadows & riverbanks", scent_quality:"Sweet almond, hay, and honey", tags:["wildflower","wetland","meadow"], region:"Europe/Asia", description:"Meadowsweet colonises riverbanks in frothy white clouds whose scent — sweet, almond-tinged, slightly medicinal — hangs over water on summer days. Aspirin was first synthesised from this plant's compounds." },
-  { name:"Night-Scented Stock", latin:"Matthiola longipetala", emoji:"🌸", gbif_key:3053272, quality:5, season:"Summer nights", habitat:"Gardens", scent_quality:"Intensely sweet, clove-like", tags:["garden","nocturnal","annual"], region:"Mediterranean", description:"Dull and closed by day, night-scented stock saves everything for after dark — its clove-sweet fragrance filling a garden on warm evenings with extraordinary intensity. Plant it beneath a bedroom window." },
-  { name:"Scots Pine", latin:"Pinus sylvestris", emoji:"🌲", gbif_key:5285750, quality:4, season:"Year-round", habitat:"Pine forest", scent_quality:"Resinous, clean, woody, medicinal", tags:["tree","forest","year-round"], region:"Europe/Asia", description:"The smell of a Scots pine forest on a warm day — resinous, clean, faintly medicinal — is one of the most restorative in nature. Breathing it among ancient pines in Scotland or Scandinavia is close to a spiritual experience." },
-  { name:"Wild Garlic", latin:"Allium ursinum", emoji:"🌿", gbif_key:2856885, quality:3, season:"Spring", habitat:"Damp woodland", scent_quality:"Pungent garlic, earthy, fresh", tags:["wildflower","woodland","edible"], region:"Europe/Asia", description:"A carpet of wild garlic in bluebell woods fills the air with an earthy, pungent green fragrance that is the very smell of spring in British woodland — bracing, alive, unmistakable." },
-  { name:"Common Lime", latin:"Tilia × europaea", emoji:"🌳", gbif_key:2875177, quality:5, season:"June/July", habitat:"Parks & avenues", scent_quality:"Intensely sweet, honeyed blossom", tags:["tree","urban","summer"], region:"Europe", description:"In June, lime tree blossom fills avenues with a honey-sweet fragrance so rich it almost makes you dizzy. Standing under a lime tree in full flower, attended by clouds of bees, is an extraordinary sensory experience." },
-  { name:"Dog Rose", latin:"Rosa canina", emoji:"🌹", gbif_key:3032856, quality:4, season:"June", habitat:"Hedgerows", scent_quality:"Delicate, light, classic rose", tags:["wildflower","hedgerow","rose"], region:"Europe", description:"The dog rose's delicate scent — lighter and more fleeting than cultivated roses — is the smell of the English hedgerow in June. It requires you to bring your nose close, which makes finding it all the more rewarding." },
-  { name:"Heather", latin:"Calluna vulgaris", emoji:"🌸", gbif_key:2876946, quality:4, season:"August/September", habitat:"Moorland & heathland", scent_quality:"Honey-sweet, slightly medicinal", tags:["moorland","heathland","late summer"], region:"Europe", description:"When the moors turn purple in August, heather releases a warm honey-sweet fragrance across the landscape. Mixed with peaty moorland air and warm breeze, it is the quintessential smell of the upland British summer." },
-  { name:"Elder Flower", latin:"Sambucus nigra", emoji:"🌸", gbif_key:2888788, quality:4, season:"June", habitat:"Hedgerows & woodland edge", scent_quality:"Muscat, sweet, summery", tags:["wildflower","hedgerow","edible"], region:"Europe", description:"Elderflower's muscat-sweet fragrance in June hedgerows is one of the most beloved of all British summer smells — so familiar it's been preserved in cordial, champagne, and countless summer drinks for generations." },
-  { name:"Rosemary", latin:"Salvia rosmarinus", emoji:"🌿", gbif_key:3172463, quality:4, season:"Year-round", habitat:"Gardens & coastal scrub", scent_quality:"Piney, camphor, resinous", tags:["herb","mediterranean","evergreen"], region:"Mediterranean", description:"Crushing a sprig of rosemary and inhaling its sharp, piney-camphor fragrance is said to improve memory and concentration. The smell of sun-warmed rosemary carries something of the Mediterranean heat itself." },
-  { name:"Wisteria", latin:"Wisteria sinensis", emoji:"💜", gbif_key:2954348, quality:5, season:"May", habitat:"Gardens & walls", scent_quality:"Sweet, violet-like, intensely floral", tags:["climber","garden","spring"], region:"Asia/Gardens", description:"Wisteria's sweet, violet-tinged fragrance cascading from purple flower clusters in May is among the most intoxicating of all garden scents. A wisteria-covered wall in full bloom seems to perfume an entire street." },
-  { name:"Common Thyme", latin:"Thymus vulgaris", emoji:"🌿", gbif_key:5408199, quality:3, season:"Summer", habitat:"Chalk downland & gardens", scent_quality:"Warm, medicinal, herbaceous", tags:["herb","chalk","mediterranean"], region:"Mediterranean", description:"Walking barefoot across a chalk downland carpeted with wild thyme, crushing it with every step, releases a warm, medicinal fragrance that is the very smell of southern European summer.", scents:null },
-  { name:"Sweet Cicely", latin:"Myrrhis odorata", emoji:"🌿", gbif_key:3034703, quality:3, season:"Spring/Summer", habitat:"Roadsides & woodland", scent_quality:"Aniseed, sweet, fresh", tags:["wildflower","upland","edible"], region:"Europe", description:"Sweet cicely smells powerfully of aniseed — fresh, sweet, and clean. Common in northern England and Scotland, it fills roadsides and woodland edges with a faintly exotic fragrance that belies its humble appearance.", scents:null },
-  { name:"Water Mint", latin:"Mentha aquatica", emoji:"🌿", gbif_key:2929049, quality:4, season:"Summer", habitat:"Riverbanks & marshes", scent_quality:"Fresh, intensely minty, clean", tags:["wetland","wildflower","edible"], region:"Europe/Asia", description:"Crushing water mint at a streamside releases the freshest, cleanest smell in nature — intensely minty, cool, alive. It is the smell of wild places, of healthy rivers, of summer walks along waterways.", scents:null },
-  { name:"Jasmine", latin:"Jasminum officinale", emoji:"🌸", gbif_key:3172488, quality:5, season:"Summer", habitat:"Gardens & warm walls", scent_quality:"Intensely sweet, indolic, heady", tags:["climber","garden","evening"], region:"Asia/Gardens", description:"Common jasmine's evening fragrance — sweet, heady, slightly narcotic — is the perfume of warm summer nights. One of the world's most-used and most-loved floral fragrances, and for very good reason.", scents:null },
-  { name:"Sweet Woodruff", latin:"Galium odoratum", emoji:"🌿", gbif_key:3085917, quality:3, season:"Spring", habitat:"Shaded woodland", scent_quality:"Hay, vanilla, coumarin", tags:["woodland","ground cover","spring"], region:"Europe/Asia", description:"Sweet woodruff smells of new-mown hay and vanilla — a soft, dry, warm fragrance that intensifies when dried. It carpets beech woodland floors in spring with a scent that seems to belong to a different, slower age.", scents:null },
-  { name:"Common Hawthorn", latin:"Crataegus monogyna", emoji:"🌸", gbif_key:2888808, quality:3, season:"May", habitat:"Hedgerows", scent_quality:"Heavy, sweet, slightly musky", tags:["hedgerow","wildlife","May"], region:"Europe", description:"Hawthorn blossom — 'May' blossom — has a heavy, complex fragrance that is sweet but with an unsettling undertone. It is inseparably associated with the English spring, and its smell instantly recalls the countryside in May.", scents:null },
-  { name:"Lily of the Valley", latin:"Convallaria majalis", emoji:"🌼", gbif_key:2757580, quality:5, season:"April/May", habitat:"Woodland & gardens", scent_quality:"Fresh, green, intensely floral", tags:["woodland","spring","garden"], region:"Europe/Asia", description:"One of the finest floral fragrances in the world — clean, green, intensely sweet without being cloying. Lily of the valley's scent is the definition of fresh spring, so prized it remains one of perfumery's most used notes.", scents:null },
-  { name:"Gorse", latin:"Ulex europaeus", emoji:"💛", gbif_key:2954391, quality:4, season:"Year-round", habitat:"Heathland & coastal cliffs", scent_quality:"Warm coconut and vanilla", tags:["heathland","coastal","year-round"], region:"Europe", description:"Gorse flowers smell remarkably of warm coconut and vanilla — a rich, tropical sweetness released by sunlit flowers that transforms a winter heath or clifftop walk into something surprisingly sensuous.", scents:null },
-  { name:"Philadelphus", latin:"Philadelphus coronarius", emoji:"🌸", gbif_key:3172198, quality:4, season:"June/July", habitat:"Gardens", scent_quality:"Sweet, orange-blossom like", tags:["garden","shrub","summer"], region:"Europe/Asia", description:"Mock orange's fragrance is so close to real orange blossom that it forms the backbone of many fine perfumes. In June gardens its heady sweetness can reach you from thirty feet away.", scents:null },
-  { name:"Sweet Pea", latin:"Lathyrus odoratus", emoji:"🌸", gbif_key:5402601, quality:4, season:"Summer", habitat:"Gardens", scent_quality:"Honey-rose, delicate, powdery", tags:["garden","climber","annual"], region:"Sicily/Gardens", description:"The sweet pea's fragrance — a delicate honey-rose scent that seems to dissolve in warm air — is one of the great pleasures of the summer cutting garden. Modern varieties have lost it; the old ones carry it beautifully.", scents:null },
-  { name:"Bog Myrtle", latin:"Myrica gale", emoji:"🌿", gbif_key:2984571, quality:4, season:"Summer", habitat:"Bogland & wet heath", scent_quality:"Resinous, sweet, aromatic", tags:["wetland","moorland","Scotland"], region:"Europe/N.America", description:"Bog myrtle releases a powerfully resinous, sweet-aromatic scent when its leaves are brushed — the smell of Highland bogs and moorland edges. Said to repel midges, it fills wet heathland with something ancient and wonderful.", scents:null },
-  { name:"Snowdrop", latin:"Galanthus nivalis", emoji:"🤍", gbif_key:5407370, quality:3, season:"January/February", habitat:"Woodland & churchyards", scent_quality:"Faint honey, almond, delicate", tags:["winter","woodland","bulb"], region:"Europe", description:"Snowdrop's scent is faint and requires close attention — a faint honey-almond sweetness from January flowers. That it exists at all, in midwinter, from the coldest of flowers, makes it extraordinary.", scents:null },
-  { name:"Alexanders", latin:"Smyrnium olusatrum", emoji:"🌿", gbif_key:3035717, quality:3, season:"Spring", habitat:"Coastal cliffs & roadsides", scent_quality:"Pungent, myrrh-like, spicy", tags:["coastal","wildflower","edible"], region:"Mediterranean/UK coast", description:"Alexanders fills coastal paths and cliff edges in early spring with a pungent, myrrh-like spiciness. A Roman introduction now naturalised on British coasts, its smell is as distinctive as the sound of the sea.", scents:null },
-  { name:"Himalayan Balsam", latin:"Impatiens glandulifera", emoji:"🌸", gbif_key:3033576, quality:2, season:"Summer/Autumn", habitat:"Riverbanks (invasive)", scent_quality:"Sweetly musky, candy-like", tags:["invasive","riverbank","late season"], region:"Himalaya (invasive UK)", description:"Though invasive and ecologically problematic, himalayan balsam's candy-sweet musky fragrance along autumn riverbanks is genuinely lovely — a reminder that beauty and harm can coexist.", scents:null },
-  { name:"Hazel", latin:"Corylus avellana", emoji:"🌰", gbif_key:2876992, quality:3, season:"February", habitat:"Woodland & hedgerows", scent_quality:"Faint honey, subtle pollen", tags:["tree","winter","hedgerow"], region:"Europe", description:"Hazel catkins in February carry the first green smell of the turning year — faint, dusty pollen sweetness that tells you, before any other sign, that the cold is beginning to break.", scents:null },
-];
+let lat = 51.5;
+let lng = -0.1;
+let type = "bird";
+let map;
+let markers = [];
+let cache = {};
 
-// ============================================================
-// STATE
-// ============================================================
-let currentTab = 'bird';
-let userLat = null, userLng = null, locationName = null;
+const DATA = {
+  bird: [
+    { name:"Blackbird", id:5789749 },
+    { name:"Robin", id:2492295 },
+    { name:"Skylark", id:2491576 }
+  ],
+  plant: [
+    { name:"Lavender", id:3172453 },
+    { name:"Rose", id:3032856 },
+    { name:"Heather", id:2876946 }
+  ]
+};
 
-// ============================================================
-// RENDER CARDS
-// ============================================================
-function renderCards(type) {
-  const data = type === 'bird' ? BIRDS : PLANTS;
-  const gridId = type === 'bird' ? 'bird-grid' : 'plant-grid';
-  const grid = document.getElementById(gridId);
-  grid.innerHTML = '';
+/* ================= MAP ================= */
+function initMap(){
+  map = L.map('map').setView([lat,lng], 10);
 
-  data.forEach((item, i) => {
-    const card = document.createElement('div');
-    card.className = 'species-card';
-    card.style.setProperty('--card-accent-a', type === 'bird' ? 'rgba(122,184,212,0.06)' : 'rgba(122,173,138,0.06)');
-    card.style.setProperty('--card-accent-b', 'transparent');
-    card.style.setProperty('--card-dot-color', type === 'bird' ? 'var(--sky-blue)' : 'var(--sage)');
-    card.style.animationDelay = `${i * 0.04}s`;
-
-    const qualityDots = Array.from({length:5}, (_,j) => 
-      `<div class="qdot ${j < item.quality ? 'filled' : ''}"></div>`).join('');
-
-    const qualityLabel = type === 'bird' ? 'Soothing quality' : 'Scent intensity';
-
-    const interactive = type === 'bird'
-      ? `<span class="sound-wave"><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span></span>`
-      : `<span class="scent-dots"><span class="scent-dot"></span><span class="scent-dot"></span><span class="scent-dot"></span></span>`;
-
-    const qualityNote = type === 'bird' ? item.sound_quality : item.scent_quality;
-
-    card.innerHTML = `
-      <div class="card-rank">#${i+1}</div>
-      <span class="card-icon">${item.emoji}</span>
-      <div class="card-name">${item.name}${interactive}</div>
-      <div class="card-latin">${item.latin}</div>
-      <div class="card-quality">
-        <span class="quality-label">${qualityLabel}</span>
-        <div class="quality-dots">${qualityDots}</div>
-      </div>
-      <div class="card-desc" style="font-style:italic;margin-bottom:6px;font-size:12.5px;color:rgba(240,234,216,0.45)">${qualityNote}</div>
-      <div class="card-desc">${item.description}</div>
-      <div class="card-tags">
-        ${item.tags.map(t => `<span class="ctag">${t}</span>`).join('')}
-        <span class="ctag">${item.season}</span>
-      </div>
-      <div class="card-footer">
-        <a class="gbif-link" href="https://www.gbif.org/species/${item.gbif_key}" target="_blank">View on GBIF ↗</a>
-        <span class="occurrence-badge" id="occ-${type}-${i}">Loading occurrences…</span>
-      </div>`;
-
-    grid.appendChild(card);
-
-    // Lazy load GBIF occurrence count
-    setTimeout(() => loadOccurrences(item, type, i), i * 80);
-  });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© OpenStreetMap'
+  }).addTo(map);
 }
 
-// ============================================================
-// GBIF OCCURRENCE LOOKUP
-// ============================================================
-async function loadOccurrences(item, type, index) {
-  const badgeId = `occ-${type}-${index}`;
-  const badge = document.getElementById(badgeId);
-  if (!badge) return;
+function clearMarkers(){
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+}
 
-  try {
-    let url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${item.gbif_key}&limit=0`;
-    if (userLat && userLng) {
-      // Search within ~50km radius using bounding box
-      const delta = 0.45; // ~50km
-      url += `&decimalLatitude=${(userLat-delta).toFixed(3)},${(userLat+delta).toFixed(3)}&decimalLongitude=${(userLng-delta).toFixed(3)},${(userLng+delta).toFixed(3)}`;
-    }
+/* ================= UI ================= */
+function setType(t){
+  type = t;
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
+  load();
+}
 
-    const res = await fetch(url);
-    const data = await res.json();
-    const count = data.count || 0;
+/* ================= LOAD ================= */
+async function load(){
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  clearMarkers();
 
-    if (userLat && userLng) {
-      badge.textContent = count > 0 ? `${count.toLocaleString()} nearby records` : 'Not recorded nearby';
-      badge.className = 'occurrence-badge ' + (count > 0 ? 'loaded' : '');
+  for(const item of DATA[type]){
+    const key = `${item.id}-${lat.toFixed(2)}-${lng.toFixed(2)}`;
+
+    let count;
+    if(cache[key]){
+      count = cache[key];
     } else {
-      const total = data.count;
-      // Get total global count
-      const globalRes = await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${item.gbif_key}&limit=0`);
-      const globalData = await globalRes.json();
-      badge.textContent = `${(globalData.count||0).toLocaleString()} global records`;
-      badge.className = 'occurrence-badge loaded';
+      const url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${item.id}&limit=0&decimalLatitude=${lat-0.5},${lat+0.5}&decimalLongitude=${lng-0.5},${lng+0.5}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      count = data.count || 0;
+      cache[key] = count;
     }
-  } catch {
-    badge.textContent = 'GBIF data';
-    badge.className = 'occurrence-badge';
+
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<b>${item.name}</b><br>${count.toLocaleString()} records`;
+    grid.appendChild(div);
+
+    if(count > 0){
+      const marker = L.marker([lat + Math.random()*0.2, lng + Math.random()*0.2])
+        .addTo(map)
+        .bindPopup(`${item.name}<br>${count} records`);
+      markers.push(marker);
+    }
   }
 }
 
-// ============================================================
-// LOCATION
-// ============================================================
-async function searchLocation() {
-  const query = document.getElementById('loc-input').value.trim();
-  if (!query) return;
+/* ================= LOCATION ================= */
+async function search(){
+  const q = document.getElementById("loc").value;
+  const res = await fetch(`https://us1.locationiq.com/v1/search.php?key=${KEY}&q=${q}&format=json`);
+  const data = await res.json();
 
-  document.getElementById('loc-btn').disabled = true;
-  showToast('Locating…');
+  if(!data.length) return toast("Not found");
 
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
-    const results = await res.json();
-    if (!results.length) { showToast('Place not found'); document.getElementById('loc-btn').disabled = false; return; }
-    
-    userLat = parseFloat(results[0].lat);
-    userLng = parseFloat(results[0].lon);
-    locationName = results[0].display_name.split(',').slice(0,2).join(',');
-    
-    updateLocationBanners();
-    reloadOccurrences();
-  } catch {
-    showToast('Search failed');
-  }
-  document.getElementById('loc-btn').disabled = false;
+  lat = parseFloat(data[0].lat);
+  lng = parseFloat(data[0].lon);
+
+  map.setView([lat,lng], 10);
+
+  toast("Updated location");
+  load();
 }
 
-function useGPS() {
-  if (!navigator.geolocation) { showToast('Geolocation not supported'); return; }
-  showToast('Finding your location…');
-  navigator.geolocation.getCurrentPosition(async pos => {
-    userLat = pos.coords.latitude;
-    userLng = pos.coords.longitude;
-    try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json`);
-      const d = await r.json();
-      locationName = (d.address?.city || d.address?.town || d.address?.village || 'your location');
-      document.getElementById('loc-input').value = locationName;
-    } catch { locationName = 'your location'; }
-    updateLocationBanners();
-    reloadOccurrences();
-  }, () => showToast('Could not get location'));
-}
-
-function updateLocationBanners() {
-  ['bird','plant'].forEach(type => {
-    const banner = document.getElementById(`${type}-location-banner`);
-    const text = document.getElementById(`${type}-location-text`);
-    banner.classList.add('visible');
-    text.innerHTML = `Showing GBIF occurrence records within ~50km of <strong>${locationName}</strong>`;
+function gps(){
+  navigator.geolocation.getCurrentPosition(async p=>{
+    lat = p.coords.latitude;
+    lng = p.coords.longitude;
+    map.setView([lat,lng], 10);
+    toast("GPS updated");
+    load();
   });
 }
 
-function reloadOccurrences() {
-  const allBadges = document.querySelectorAll('.occurrence-badge');
-  allBadges.forEach(b => { b.textContent = 'Reloading…'; b.className = 'occurrence-badge'; });
-
-  BIRDS.forEach((item, i) => setTimeout(() => loadOccurrences(item, 'bird', i), i * 60));
-  PLANTS.forEach((item, i) => setTimeout(() => loadOccurrences(item, 'plant', i), i * 60));
-  showToast(`Loaded local data for ${locationName}`);
-}
-
-// ============================================================
-// TAB SWITCHING
-// ============================================================
-function switchTab(tab) {
-  currentTab = tab;
-  document.getElementById('section-bird').classList.toggle('visible', tab === 'bird');
-  document.getElementById('section-plant').classList.toggle('visible', tab === 'plant');
-  document.getElementById('tab-bird').className = tab === 'bird' ? 'tab-btn active-bird' : 'tab-btn';
-  document.getElementById('tab-plant').className = tab === 'plant' ? 'tab-btn active-plant' : 'tab-btn';
-}
-
-// ============================================================
-// PARTICLES
-// ============================================================
-function spawnParticles() {
-  const canvas = document.querySelector('.bg-canvas');
-  const colors = ['rgba(201,168,76,0.4)', 'rgba(122,173,138,0.3)', 'rgba(122,184,212,0.3)', 'rgba(212,148,76,0.2)'];
-  for (let i = 0; i < 18; i++) {
-    const p = document.createElement('div');
-    p.className = 'floating-particle';
-    const size = Math.random() * 4 + 1;
-    p.style.cssText = `
-      width:${size}px; height:${size}px;
-      left:${Math.random()*100}%;
-      background:${colors[Math.floor(Math.random()*colors.length)]};
-      animation-duration:${12 + Math.random()*20}s;
-      animation-delay:${Math.random()*15}s;
-    `;
-    canvas.appendChild(p);
-  }
-}
-
-// ============================================================
-// TOAST
-// ============================================================
-function showToast(msg) {
-  const t = document.getElementById('toast');
+/* ================= TOAST ================= */
+function toast(msg){
+  const t = document.getElementById("toast");
   t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-// ============================================================
-// INIT
-// ============================================================
-spawnParticles();
-renderCards('bird');
-renderCards('plant');
+/* ================= INIT ================= */
+initMap();
+load();
 </script>
+
 </body>
 </html>
