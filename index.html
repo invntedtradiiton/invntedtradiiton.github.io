@@ -3,49 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biodiversity Explorer (GBIF + Map)</title>
+
+<title>Senses — Bird Song & Botanical Fragrance</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
 body {
   margin:0;
-  font-family: Arial, sans-serif;
+  font-family: Georgia, serif;
   background:#1a1428;
   color:#f0ead8;
 }
 
 header {
-  padding:12px;
+  padding:18px;
   text-align:center;
 }
 
-input, button {
-  padding:10px;
-  margin:4px;
+h1 {
+  margin:0;
+  font-weight:300;
+}
+
+.sub {
+  opacity:0.7;
+  font-style:italic;
+  margin-top:6px;
 }
 
 #layout {
   display:grid;
   grid-template-columns: 1fr 1fr;
-  height: calc(100vh - 80px);
+  height: calc(100vh - 120px);
 }
 
-#map {
-  height:100%;
-}
+#map { height:100%; }
 
 #grid {
   overflow:auto;
-  padding:10px;
+  padding:12px;
 }
 
 .card {
-  padding:10px;
-  margin-bottom:10px;
+  padding:14px;
+  margin-bottom:12px;
+  border-radius:12px;
   border:1px solid rgba(255,255,255,0.1);
-  border-radius:8px;
   background:rgba(255,255,255,0.03);
+}
+
+.name {
+  font-size:16px;
+  font-weight:bold;
+}
+
+.latin {
+  font-size:12px;
+  opacity:0.6;
+}
+
+.meta {
+  font-size:12px;
+  margin-top:6px;
+  opacity:0.8;
+  line-height:1.4;
+}
+
+button {
+  margin-top:8px;
+  padding:6px 10px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  background:#c9a84c;
+  color:#1a1428;
+}
+
+audio {
+  width:100%;
+  margin-top:8px;
 }
 </style>
 </head>
@@ -53,10 +90,10 @@ input, button {
 <body>
 
 <header>
-  <h2>GBIF Biodiversity Explorer</h2>
-  <input id="loc" placeholder="Search location">
-  <button onclick="searchLocation()">Search</button>
-  <button onclick="gps()">📍</button>
+  <h1>The Senses — Bird Song & Botanical Fragrance</h1>
+  <div class="sub">
+    A sensory field guide. Real species, real places — birds that sing and plants that scent the air.
+  </div>
 </header>
 
 <div id="layout">
@@ -68,29 +105,66 @@ input, button {
 
 <script>
 /* =========================
-   API KEY
-========================= */
-const LOCATIONIQ_KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
-
-/* =========================
    STATE
 ========================= */
 let map;
 let lat = 51.5;
 let lng = -0.1;
 
-/* A small curated list (expand anytime) */
+/* =========================
+   SPECIES (ENGLISH + LATIN + SENSORY LAYERS)
+========================= */
 const SPECIES = [
-  "Turdus merula",        // Blackbird
-  "Erithacus rubecula",   // Robin
-  "Alauda arvensis",      // Skylark
-  "Lavandula angustifolia",
-  "Rosa canina",
-  "Calluna vulgaris"
+  {
+    english:"Blackbird",
+    latin:"Turdus merula",
+    emoji:"🐦",
+    scent:null,
+    soundQuery:"Turdus merula"
+  },
+  {
+    english:"Robin",
+    latin:"Erithacus rubecula",
+    emoji:"🐦",
+    scent:null,
+    soundQuery:"Erithacus rubecula"
+  },
+  {
+    english:"Skylark",
+    latin:"Alauda arvensis",
+    emoji:"🎵",
+    scent:null,
+    soundQuery:"Alauda arvensis"
+  },
+  {
+    english:"Common Nightingale",
+    latin:"Luscinia megarhynchos",
+    emoji:"🌙🐦",
+    scent:null,
+    soundQuery:"Luscinia megarhynchos"
+  },
+  {
+    english:"Lavender",
+    latin:"Lavandula angustifolia",
+    emoji:"🪻",
+    scent:"Clean, herbal, calming fragrance released when brushed or warmed by sun."
+  },
+  {
+    english:"Dog Rose",
+    latin:"Rosa canina",
+    emoji:"🌹",
+    scent:"Light wild rose scent — subtle, airy, often only noticeable when close."
+  },
+  {
+    english:"Honeysuckle",
+    latin:"Lonicera periclymenum",
+    emoji:"🌸",
+    scent:"Intensely sweet evening fragrance that strengthens at dusk to attract moths."
+  }
 ];
 
 /* =========================
-   INIT MAP
+   MAP INIT
 ========================= */
 function initMap(){
   map = L.map('map').setView([lat, lng], 10);
@@ -101,104 +175,104 @@ function initMap(){
 }
 
 /* =========================
-   RESOLVE GBIF TAXON KEY
+   GBIF TAXON KEY
 ========================= */
 async function getTaxonKey(name){
-  try {
-    const res = await fetch(
-      `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(name)}`
-    );
-    const data = await res.json();
-    return data.usageKey || null;
-  } catch {
-    return null;
-  }
+  const r = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(name)}`);
+  const d = await r.json();
+  return d.usageKey;
 }
 
 /* =========================
-   GET OCCURRENCE POINTS
+   OCCURRENCES
 ========================= */
-async function getOccurrences(taxonKey){
-  try {
-    const res = await fetch(
-      `https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&limit=20&decimalLatitude=${lat-1},${lat+1}&decimalLongitude=${lng-1},${lng+1}`
-    );
-    const data = await res.json();
-    return data.results || [];
-  } catch {
-    return [];
-  }
+async function getOccurrences(key){
+  const r = await fetch(
+    `https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&limit=15&decimalLatitude=${lat-1},${lat+1}&decimalLongitude=${lng-1},${lng+1}`
+  );
+  const d = await r.json();
+  return d.results || [];
 }
 
 /* =========================
-   LOAD SPECIES
+   XENO-CANTO BIRD SOUND
+========================= */
+async function getBirdAudio(latin){
+  try {
+    const r = await fetch(`https://xeno-canto.org/api/2/recordings?query=${latin}`);
+    const d = await r.json();
+    if(d.recordings && d.recordings.length){
+      return d.recordings[0].file;
+    }
+  } catch {}
+  return null;
+}
+
+/* =========================
+   LOAD
 ========================= */
 async function load(){
+
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
 
-  map.eachLayer(layer => {
-    if(layer instanceof L.Marker) map.removeLayer(layer);
+  map.eachLayer(l=>{
+    if(l instanceof L.Marker) map.removeLayer(l);
   });
 
-  for(const name of SPECIES){
+  for(const s of SPECIES){
 
-    const div = document.createElement("div");
-    div.className = "card";
-    div.textContent = `Loading ${name}...`;
-    grid.appendChild(div);
+    const card = document.createElement("div");
+    card.className = "card";
 
-    const key = await getTaxonKey(name);
+    card.innerHTML = `
+      <div class="name">${s.emoji} ${s.english}</div>
+      <div class="latin">${s.latin}</div>
+      <div class="meta">${s.scent ? "🌸 " + s.scent : "🎵 Searching for song..."}</div>
+      <div class="meta loading">Loading GBIF...</div>
+    `;
+
+    grid.appendChild(card);
+
+    const key = await getTaxonKey(s.latin);
 
     if(!key){
-      div.textContent = `${name} — not found in GBIF`;
+      card.querySelector(".loading").textContent = "Not found in GBIF";
       continue;
     }
 
-    const occurrences = await getOccurrences(key);
+    const occ = await getOccurrences(key);
 
-    div.innerHTML = `<b>${name}</b><br>${occurrences.length} local records`;
+    card.querySelector(".loading").textContent =
+      `${occ.length} local GBIF records`;
 
-    occurrences.forEach(o => {
+    /* MAP */
+    occ.forEach(o=>{
       if(o.decimalLatitude && o.decimalLongitude){
         L.marker([o.decimalLatitude, o.decimalLongitude])
           .addTo(map)
-          .bindPopup(name);
+          .bindPopup(`${s.english}`);
       }
     });
+
+    /* AUDIO (birds only) */
+    if(s.soundQuery){
+
+      const audioUrl = await getBirdAudio(s.soundQuery);
+
+      if(audioUrl){
+        const audio = document.createElement("audio");
+        audio.controls = true;
+        audio.src = audioUrl;
+        card.appendChild(audio);
+      } else {
+        const note = document.createElement("div");
+        note.className = "meta";
+        note.textContent = "No audio found";
+        card.appendChild(note);
+      }
+    }
   }
-}
-
-/* =========================
-   SEARCH LOCATION
-========================= */
-async function searchLocation(){
-  const q = document.getElementById("loc").value;
-
-  const res = await fetch(
-    `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(q)}&format=json`
-  );
-
-  const data = await res.json();
-  if(!data.length) return alert("Not found");
-
-  lat = parseFloat(data[0].lat);
-  lng = parseFloat(data[0].lon);
-
-  map.setView([lat, lng], 10);
-  load();
-}
-
-/* =========================
-   GPS
-========================= */
-function gps(){
-  navigator.geolocation.getCurrentPosition(p=>{
-    lat = p.coords.latitude;
-    lng = p.coords.longitude;
-    map.setView([lat, lng], 10);
-    load();
-  });
 }
 
 /* =========================
