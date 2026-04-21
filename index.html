@@ -7,9 +7,13 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Josefin+Sans:wght@200;300;400&display=swap" rel="stylesheet">
 
+<!-- MAP -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
 :root{
-  --bg:#120f1c;
+  --bg:#0f0c18;
   --card:#1c1729;
   --gold:#c9a84c;
   --text:#f3eddc;
@@ -19,9 +23,10 @@
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
+
 body{
-  font-family: 'Josefin Sans', sans-serif;
-  background: radial-gradient(circle at top,#1d1630,#0f0c18);
+  font-family:'Josefin Sans',sans-serif;
+  background:radial-gradient(circle at top,#1d1630,#0f0c18);
   color:var(--text);
   overflow-x:hidden;
 }
@@ -29,29 +34,31 @@ body{
 /* HERO */
 .hero{
   text-align:center;
-  padding:70px 20px 30px;
+  padding:70px 20px 20px;
 }
+
 .hero h1{
   font-family:'Cormorant Garamond';
   font-size:64px;
   font-weight:300;
 }
+
 .hero p{
   max-width:650px;
   margin:10px auto;
   color:var(--muted);
-  font-size:15px;
   line-height:1.6;
 }
 
 /* SEARCH */
 .search{
-  margin:20px auto;
   display:flex;
   gap:10px;
   justify-content:center;
   flex-wrap:wrap;
+  margin-top:15px;
 }
+
 input{
   padding:12px 16px;
   border-radius:30px;
@@ -60,6 +67,7 @@ input{
   color:white;
   width:260px;
 }
+
 button{
   padding:12px 18px;
   border-radius:30px;
@@ -69,17 +77,29 @@ button{
   cursor:pointer;
 }
 
+/* MAP */
+#map{
+  height:280px;
+  max-width:1100px;
+  margin:20px auto;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.1);
+  overflow:hidden;
+}
+
 /* TABS */
 .tabs{
   display:flex;
   justify-content:center;
-  margin:30px 0;
+  margin:25px 0;
 }
+
 .tab{
-  padding:12px 26px;
+  padding:12px 24px;
   border:1px solid rgba(255,255,255,0.15);
   cursor:pointer;
 }
+
 .tab.active{
   background:rgba(122,184,212,0.15);
   color:var(--blue);
@@ -101,17 +121,23 @@ button{
   border:1px solid rgba(255,255,255,0.08);
   padding:18px;
   border-radius:16px;
+  transition:0.3s;
 }
+
+.card:hover{
+  transform:translateY(-4px);
+}
+
 .card h3{font-size:18px}
-.latin{font-style:italic;color:var(--muted);font-size:12px}
-.desc{margin-top:10px;font-size:13px}
+.latin{color:var(--muted);font-size:12px;font-style:italic}
+.desc{margin-top:10px;font-size:13px;line-height:1.5}
 .meta{margin-top:10px;font-size:12px;color:var(--gold)}
 
 .banner{
   text-align:center;
-  margin:10px;
-  font-size:13px;
   color:var(--muted);
+  font-size:13px;
+  margin-top:10px;
 }
 </style>
 </head>
@@ -121,154 +147,157 @@ button{
 <div class="hero">
   <h1>get out</h1>
   <p>
-    A field guide to birds and plants near you in the UK.
-    Built from real biodiversity data — not guesses.
+    A field guide to soothing birdsong and fragrant plants near you.
+    Built to get you outside and actually experience nature.
   </p>
 
   <div class="search">
-    <input id="loc" placeholder="Enter a place (e.g. London)" />
+    <input id="loc" placeholder="Search place (e.g. London)" />
     <button onclick="searchLocation()">Search</button>
-    <button onclick="gps()">📍 use my location</button>
+    <button onclick="gps()">📍 my location</button>
   </div>
 </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('birds', event)">🎵 birds</div>
-  <div class="tab" onclick="switchTab('plants', event)">🌿 plants</div>
-</div>
+<div id="map"></div>
 
 <div class="banner" id="banner"></div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('birds')">🎵 birds</div>
+  <div class="tab" onclick="switchTab('plants')">🌿 plants</div>
+</div>
+
 <div id="grid" class="grid"></div>
 
 <script>
+const GEO_KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
+
 let lat=null, lon=null;
+let map, marker;
 let current="birds";
 
-const cache = {};
-
-const birds = [
-"Blackbird",
-"Nightingale",
-"Robin"
+const birds=[
+{
+name:"Blackbird 🐦",
+latin:"Turdus merula",
+desc:"Rich, fluted dawn song like improvisational jazz.",
+sound:"liquid whistles in evening air",
+gbif:5789749
+},
+{
+name:"Nightingale 🎶",
+latin:"Luscinia megarhynchos",
+desc:"One of nature’s most complex night songs.",
+sound:"explosive trills in darkness",
+gbif:2492321
+}
 ];
 
-const plants = [
-"Lavandula angustifolia",
-"Lonicera periclymenum",
-"Allium ursinum"
+const plants=[
+{
+name:"Lavender 💜",
+latin:"Lavandula angustifolia",
+desc:"Calming Mediterranean floral scent.",
+smell:"dry floral herbal calm",
+gbif:3172453
+},
+{
+name:"Honeysuckle 🌸",
+latin:"Lonicera periclymenum",
+desc:"Intense evening fragrance in hedgerows.",
+smell:"sweet nectar-like dusk scent",
+gbif:3172678
+}
 ];
 
-/* TAB SWITCH */
-function switchTab(t, e){
+function initMap(){
+map = L.map('map').setView([51.5072,-0.1276],10);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:'© OpenStreetMap'
+}).addTo(map);
+}
+
+function updateMap(a,b,label){
+if(!map) initMap();
+
+map.setView([a,b],11);
+
+if(marker) marker.remove();
+
+marker=L.marker([a,b]).addTo(map)
+.bindPopup(label).openPopup();
+}
+
+function switchTab(t){
 current=t;
 document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-e.target.classList.add("active");
+event.target.classList.add("active");
 render();
 }
 
-/* MAIN RENDER */
 function render(){
-const data = current==="birds"?birds:plants;
-const grid = document.getElementById("grid");
+const data=current==="birds"?birds:plants;
+const grid=document.getElementById("grid");
 grid.innerHTML="";
 
-data.forEach(name=>{
+data.forEach(async item=>{
 const div=document.createElement("div");
 div.className="card";
 
 div.innerHTML=`
-<h3>${name}</h3>
-<div class="meta">loading biodiversity data...</div>
+<h3>${item.name}</h3>
+<div class="latin">${item.latin}</div>
+<div class="desc">${item.desc}</div>
+<div class="meta">${current==="birds"?"🎧 "+item.sound:"🌸 "+item.smell}</div>
 `;
 
 grid.appendChild(div);
 
-loadGBIF(name, div);
+try{
+const r=await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${item.gbif}&limit=0`);
+const d=await r.json();
+
+const tag=document.createElement("div");
+tag.style.fontSize="11px";
+tag.style.marginTop="8px";
+tag.style.color="#7aad8a";
+tag.innerText = lat ? `${d.count} nearby records` : `${d.count} global records`;
+
+div.appendChild(tag);
+}catch(e){}
 });
 }
 
-/* GBIF + UK OCCURRENCE FIX */
-async function loadGBIF(name, el){
-try{
-
-if(cache[name]){
-return renderCard(el, cache[name]);
-}
-
-/* 1. resolve species */
-const match = await fetch(
-`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(name)}`
-);
-const m = await match.json();
-
-const key = m.usageKey;
-if(!key){
-renderCard(el, {count:0});
-return;
-}
-
-/* 2. UK-focused bounding */
-let url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&limit=0`;
-
-if(lat && lon){
-const d = 0.5;
-url += `&decimalLatitude=${lat-d},${lat+d}&decimalLongitude=${lon-d},${lon+d}`;
-}
-
-const r = await fetch(url);
-const d = await r.json();
-
-const result = {
-count: d.count || 0,
-scientific: m.scientificName || name
-};
-
-cache[name]=result;
-renderCard(el, result);
-
-}catch(e){
-console.log(e);
-}
-}
-
-/* CARD UPDATE */
-function renderCard(el, data){
-el.querySelector(".meta").innerHTML =
-lat
-? `📍 ${data.count} nearby UK records`
-: `🌍 ${data.count.toLocaleString()} global records`;
-}
-
-/* LOCATION SEARCH */
 async function searchLocation(){
 const q=document.getElementById("loc").value;
-if(!q) return;
+if(!q)return;
 
-const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
+const r=await fetch(`https://us1.locationiq.com/v1/search.php?key=${GEO_KEY}&q=${encodeURIComponent(q)}&format=json`);
 const d=await r.json();
 
 lat=parseFloat(d[0].lat);
 lon=parseFloat(d[0].lon);
 
-document.getElementById("banner").innerText=
-`Showing UK wildlife near ${d[0].display_name}`;
+document.getElementById("banner").innerText="Showing nature near "+d[0].display_name;
 
+updateMap(lat,lon,d[0].display_name);
 render();
 }
 
-/* GPS */
 function gps(){
-navigator.geolocation.getCurrentPosition(pos=>{
+navigator.geolocation.getCurrentPosition(async pos=>{
 lat=pos.coords.latitude;
 lon=pos.coords.longitude;
 
-document.getElementById("banner").innerText=
-"Showing wildlife near your location";
+document.getElementById("banner").innerText="Showing nature near you";
 
+updateMap(lat,lon,"Your location");
 render();
 });
 }
 
+initMap();
 render();
 </script>
 
