@@ -35,7 +35,6 @@ body{
   font-family:'Cormorant Garamond';
   font-size:64px;
   font-weight:300;
-  letter-spacing:1px;
 }
 .hero p{
   max-width:650px;
@@ -45,7 +44,7 @@ body{
   line-height:1.6;
 }
 
-/* LOCATION */
+/* SEARCH */
 .search{
   margin:20px auto;
   display:flex;
@@ -68,13 +67,6 @@ button{
   background:transparent;
   color:var(--gold);
   cursor:pointer;
-}
-button:hover{background:rgba(201,168,76,0.1)}
-
-.small{
-  font-size:11px;
-  color:var(--muted);
-  text-align:center;
 }
 
 /* TABS */
@@ -109,41 +101,18 @@ button:hover{background:rgba(201,168,76,0.1)}
   border:1px solid rgba(255,255,255,0.08);
   padding:18px;
   border-radius:16px;
-  transition:0.3s;
 }
-.card:hover{
-  transform:translateY(-4px);
-  border-color:rgba(255,255,255,0.2);
-}
-.card h3{
-  font-size:18px;
-  margin-bottom:6px;
-}
-.latin{
-  font-style:italic;
-  color:var(--muted);
-  font-size:12px;
-}
-.desc{
-  margin-top:10px;
-  font-size:13px;
-  line-height:1.5;
-  color:#d7d0c2;
-}
-.meta{
-  margin-top:10px;
-  font-size:12px;
-  color:var(--gold);
-}
+.card h3{font-size:18px}
+.latin{font-style:italic;color:var(--muted);font-size:12px}
+.desc{margin-top:10px;font-size:13px}
+.meta{margin-top:10px;font-size:12px;color:var(--gold)}
 
-/* LOCATION BANNER */
 .banner{
   text-align:center;
   margin:10px;
   font-size:13px;
   color:var(--muted);
 }
-
 </style>
 </head>
 
@@ -152,8 +121,8 @@ button:hover{background:rgba(201,168,76,0.1)}
 <div class="hero">
   <h1>get out</h1>
   <p>
-    A field guide to the most soothing birdsong and most fragrant plants near you.
-    Built to get you outside — to hear, smell, and actually experience nature again.
+    A field guide to birds and plants near you in the UK.
+    Built from real biodiversity data — not guesses.
   </p>
 
   <div class="search">
@@ -161,148 +130,141 @@ button:hover{background:rgba(201,168,76,0.1)}
     <button onclick="searchLocation()">Search</button>
     <button onclick="gps()">📍 use my location</button>
   </div>
-
-  <div class="small">Powered by GBIF biodiversity data + OpenStreetMap</div>
 </div>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('birds')">🎵 birds</div>
-  <div class="tab" onclick="switchTab('plants')">🌿 plants</div>
+  <div class="tab active" onclick="switchTab('birds', event)">🎵 birds</div>
+  <div class="tab" onclick="switchTab('plants', event)">🌿 plants</div>
 </div>
 
 <div class="banner" id="banner"></div>
-
 <div id="grid" class="grid"></div>
 
 <script>
-const GEO_KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
-
 let lat=null, lon=null;
 let current="birds";
 
+const cache = {};
+
 const birds = [
-{
-name:"Blackbird 🐦",
-latin:"Turdus merula",
-desc:"One of the most familiar dawn songs — rich, fluted, improvised like jazz.",
-sound:"soft liquid whistles rising into evening air",
-gbif:5789749
-},
-{
-name:"Nightingale 🎶",
-latin:"Luscinia megarhynchos",
-desc:"A legendary night singer — chaotic, beautiful, almost human in complexity.",
-sound:"bursting trills and cascading phrases in the dark",
-gbif:2492321
-},
-{
-name:"Robin 🟥",
-latin:"Erithacus rubecula",
-desc:"A winter singer — fragile, emotional, strangely intimate.",
-sound:"thin silver notes hanging in cold air",
-gbif:2492295
-}
+"Blackbird",
+"Nightingale",
+"Robin"
 ];
 
 const plants = [
-{
-name:"Lavender 💜",
-latin:"Lavandula angustifolia",
-desc:"Calming Mediterranean scent used for sleep and relaxation.",
-smell:"dry floral calm with herbal softness",
-gbif:3172453
-},
-{
-name:"Honeysuckle 🌸",
-latin:"Lonicera periclymenum",
-desc:"One of the strongest evening fragrances in the British countryside.",
-smell:"sweet nectar-like scent intensifying at dusk",
-gbif:3172678
-},
-{
-name:"Wild Garlic 🌿",
-latin:"Allium ursinum",
-desc:"Spring woodland smell that takes over entire forests.",
-smell:"sharp green garlic burst in damp air",
-gbif:2856885
-}
+"Lavandula angustifolia",
+"Lonicera periclymenum",
+"Allium ursinum"
 ];
 
-function switchTab(t){
+/* TAB SWITCH */
+function switchTab(t, e){
 current=t;
 document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-event.target.classList.add("active");
+e.target.classList.add("active");
 render();
 }
 
+/* MAIN RENDER */
 function render(){
 const data = current==="birds"?birds:plants;
 const grid = document.getElementById("grid");
 grid.innerHTML="";
 
-data.forEach(async item=>{
+data.forEach(name=>{
 const div=document.createElement("div");
 div.className="card";
 
-let extra = "";
-
-if(current==="birds"){
-extra = "🎧 sound: " + item.sound;
-} else {
-extra = "🌸 scent: " + item.smell;
-}
-
 div.innerHTML=`
-<h3>${item.name}</h3>
-<div class="latin">${item.latin}</div>
-<div class="desc">${item.desc}</div>
-<div class="meta">${extra}</div>
+<h3>${name}</h3>
+<div class="meta">loading biodiversity data...</div>
 `;
 
 grid.appendChild(div);
 
-loadGBIF(item.gbif, div);
+loadGBIF(name, div);
 });
 }
 
-async function loadGBIF(key, el){
+/* GBIF + UK OCCURRENCE FIX */
+async function loadGBIF(name, el){
 try{
-const r = await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&limit=0`);
-const d = await r.json();
-const count = d.count || 0;
 
-const tag = document.createElement("div");
-tag.style.marginTop="8px";
-tag.style.fontSize="11px";
-tag.style.color="#7aad8a";
-tag.innerText = lat ? `${count} nearby records` : `${count.toLocaleString()} global records`;
-
-el.appendChild(tag);
-}catch(e){}
+if(cache[name]){
+return renderCard(el, cache[name]);
 }
 
-async function searchLocation(){
-const q = document.getElementById("loc").value;
-if(!q) return;
+/* 1. resolve species */
+const match = await fetch(
+`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(name)}`
+);
+const m = await match.json();
 
-const r = await fetch(`https://us1.locationiq.com/v1/search.php?key=${GEO_KEY}&q=${encodeURIComponent(q)}&format=json`);
+const key = m.usageKey;
+if(!key){
+renderCard(el, {count:0});
+return;
+}
+
+/* 2. UK-focused bounding */
+let url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&limit=0`;
+
+if(lat && lon){
+const d = 0.5;
+url += `&decimalLatitude=${lat-d},${lat+d}&decimalLongitude=${lon-d},${lon+d}`;
+}
+
+const r = await fetch(url);
 const d = await r.json();
 
-lat = d[0].lat;
-lon = d[0].lon;
+const result = {
+count: d.count || 0,
+scientific: m.scientificName || name
+};
 
-document.getElementById("banner").innerText =
-`Showing wildlife near ${d[0].display_name}`;
+cache[name]=result;
+renderCard(el, result);
+
+}catch(e){
+console.log(e);
+}
+}
+
+/* CARD UPDATE */
+function renderCard(el, data){
+el.querySelector(".meta").innerHTML =
+lat
+? `📍 ${data.count} nearby UK records`
+: `🌍 ${data.count.toLocaleString()} global records`;
+}
+
+/* LOCATION SEARCH */
+async function searchLocation(){
+const q=document.getElementById("loc").value;
+if(!q) return;
+
+const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
+const d=await r.json();
+
+lat=parseFloat(d[0].lat);
+lon=parseFloat(d[0].lon);
+
+document.getElementById("banner").innerText=
+`Showing UK wildlife near ${d[0].display_name}`;
 
 render();
 }
 
+/* GPS */
 function gps(){
-navigator.geolocation.getCurrentPosition(async pos=>{
+navigator.geolocation.getCurrentPosition(pos=>{
 lat=pos.coords.latitude;
 lon=pos.coords.longitude;
 
-document.getElementById("banner").innerText="Showing wildlife near your location";
+document.getElementById("banner").innerText=
+"Showing wildlife near your location";
+
 render();
 });
 }
