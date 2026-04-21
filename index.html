@@ -1,323 +1,313 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>get out — nature field guide</title>
 
-<title>Get Out Into Nearest Nature</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Josefin+Sans:wght@200;300;400&display=swap" rel="stylesheet">
 
 <style>
 :root{
-  --bg:#0f0c1a;
-  --panel:#17122a;
+  --bg:#120f1c;
+  --card:#1c1729;
+  --gold:#c9a84c;
   --text:#f3eddc;
-  --muted:rgba(243,237,220,0.65);
-  --accent:#c9a84c;
+  --muted:#a9a39a;
   --green:#7aad8a;
   --blue:#7ab8d4;
 }
 
+*{margin:0;padding:0;box-sizing:border-box}
 body{
-  margin:0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background:var(--bg);
+  font-family: 'Josefin Sans', sans-serif;
+  background: radial-gradient(circle at top,#1d1630,#0f0c18);
   color:var(--text);
+  overflow-x:hidden;
 }
 
-/* HEADER */
-header{
-  padding:32px 20px 18px;
-  max-width:900px;
-  margin:auto;
+/* HERO */
+.hero{
+  text-align:center;
+  padding:70px 20px 30px;
 }
-
-h1{
-  font-size:34px;
-  font-weight:600;
-  margin:0 0 10px;
-  letter-spacing:-0.5px;
+.hero h1{
+  font-family:'Cormorant Garamond';
+  font-size:64px;
+  font-weight:300;
+  letter-spacing:1px;
 }
-
-.subtitle{
+.hero p{
+  max-width:650px;
+  margin:10px auto;
+  color:var(--muted);
   font-size:15px;
   line-height:1.6;
-  color:var(--muted);
-  max-width:700px;
 }
 
-/* LAYOUT */
-#layout{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  height: calc(100vh - 140px);
+/* LOCATION */
+.search{
+  margin:20px auto;
+  display:flex;
   gap:10px;
-  padding:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+input{
+  padding:12px 16px;
+  border-radius:30px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.05);
+  color:white;
+  width:260px;
+}
+button{
+  padding:12px 18px;
+  border-radius:30px;
+  border:1px solid var(--gold);
+  background:transparent;
+  color:var(--gold);
+  cursor:pointer;
+}
+button:hover{background:rgba(201,168,76,0.1)}
+
+.small{
+  font-size:11px;
+  color:var(--muted);
+  text-align:center;
 }
 
-/* MAP */
-#map{
-  border-radius:16px;
-  overflow:hidden;
+/* TABS */
+.tabs{
+  display:flex;
+  justify-content:center;
+  margin:30px 0;
+}
+.tab{
+  padding:12px 26px;
+  border:1px solid rgba(255,255,255,0.15);
+  cursor:pointer;
+}
+.tab.active{
+  background:rgba(122,184,212,0.15);
+  color:var(--blue);
 }
 
-/* LIST */
-#grid{
-  overflow:auto;
-  padding:10px;
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:16px;
+  padding:0 20px 60px;
+  max-width:1200px;
+  margin:auto;
 }
 
 /* CARD */
 .card{
-  background:var(--panel);
-  border:1px solid rgba(255,255,255,0.06);
-  border-radius:14px;
-  padding:14px;
-  margin-bottom:10px;
-  transition:0.2s ease;
+  background:linear-gradient(145deg,#1c1729,#15101f);
+  border:1px solid rgba(255,255,255,0.08);
+  padding:18px;
+  border-radius:16px;
+  transition:0.3s;
 }
-
 .card:hover{
-  transform:translateY(-2px);
-  border-color:rgba(255,255,255,0.12);
+  transform:translateY(-4px);
+  border-color:rgba(255,255,255,0.2);
 }
-
-.title{
-  font-size:16px;
-  font-weight:600;
-  display:flex;
-  align-items:center;
-  gap:8px;
+.card h3{
+  font-size:18px;
+  margin-bottom:6px;
 }
-
 .latin{
+  font-style:italic;
+  color:var(--muted);
   font-size:12px;
-  opacity:0.5;
-  margin-top:2px;
+}
+.desc{
+  margin-top:10px;
+  font-size:13px;
+  line-height:1.5;
+  color:#d7d0c2;
+}
+.meta{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--gold);
 }
 
-.meta{
+/* LOCATION BANNER */
+.banner{
+  text-align:center;
+  margin:10px;
   font-size:13px;
   color:var(--muted);
-  margin-top:8px;
-  line-height:1.4;
 }
 
-.tag{
-  display:inline-block;
-  font-size:11px;
-  padding:3px 8px;
-  border-radius:20px;
-  background:rgba(255,255,255,0.06);
-  margin-top:8px;
-}
-
-/* AUDIO */
-audio{
-  width:100%;
-  margin-top:10px;
-}
-
-/* RESPONSIVE */
-@media(max-width:900px){
-  #layout{
-    grid-template-columns:1fr;
-    height:auto;
-  }
-  #map{
-    height:300px;
-  }
-}
 </style>
 </head>
 
 <body>
 
-<header>
-  <h1>Get Out Into Nearest Nature</h1>
-  <div class="subtitle">
-    This is a field guide designed to pull you outside — toward the most soothing birdsong and the most fragrant wild flowers near you.
-    Real species from GBIF. Real recordings. Real places waiting to be explored.
-  </div>
-</header>
+<div class="hero">
+  <h1>get out</h1>
+  <p>
+    A field guide to the most soothing birdsong and most fragrant plants near you.
+    Built to get you outside — to hear, smell, and actually experience nature again.
+  </p>
 
-<div id="layout">
-  <div id="map"></div>
-  <div id="grid"></div>
+  <div class="search">
+    <input id="loc" placeholder="Enter a place (e.g. London)" />
+    <button onclick="searchLocation()">Search</button>
+    <button onclick="gps()">📍 use my location</button>
+  </div>
+
+  <div class="small">Powered by GBIF biodiversity data + OpenStreetMap</div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('birds')">🎵 birds</div>
+  <div class="tab" onclick="switchTab('plants')">🌿 plants</div>
+</div>
+
+<div class="banner" id="banner"></div>
+
+<div id="grid" class="grid"></div>
 
 <script>
-let map;
-let lat = 51.5;
-let lng = -0.1;
+const GEO_KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
 
-/* =========================
-   CURATED SPECIES
-========================= */
-const SPECIES = [
-  {
-    name:"🐦 Blackbird",
-    latin:"Turdus merula",
-    scent:null,
-    sound:true,
-    note:"Rich, flute-like dawn song — one of the most calming urban sounds in Britain."
-  },
-  {
-    name:"🐦 Robin",
-    latin:"Erithacus rubecula",
-    scent:null,
-    sound:true,
-    note:"Soft, wistful song that carries through gardens even in winter."
-  },
-  {
-    name:"🎵 Skylark",
-    latin:"Alauda arvensis",
-    scent:null,
-    sound:true,
-    note:"Continuous rising song high above open fields — pure openness in sound."
-  },
-  {
-    name:"🌙 Nightingale",
-    latin:"Luscinia megarhynchos",
-    scent:null,
-    sound:true,
-    note:"Legendary night song — dense, emotional, and deeply immersive."
-  },
-  {
-    name:"🪻 Lavender",
-    latin:"Lavandula angustifolia",
-    scent:"Clean, calming, herbal fragrance that relaxes the nervous system.",
-    sound:false
-  },
-  {
-    name:"🌹 Dog Rose",
-    latin:"Rosa canina",
-    scent:"Light wild rose scent — subtle, best discovered in hedgerows at close range.",
-    sound:false
-  },
-  {
-    name:"🌸 Honeysuckle",
-    latin:"Lonicera periclymenum",
-    scent:"Sweet, heady evening fragrance that intensifies at dusk.",
-    sound:false
-  }
+let lat=null, lon=null;
+let current="birds";
+
+const birds = [
+{
+name:"Blackbird 🐦",
+latin:"Turdus merula",
+desc:"One of the most familiar dawn songs — rich, fluted, improvised like jazz.",
+sound:"soft liquid whistles rising into evening air",
+gbif:5789749
+},
+{
+name:"Nightingale 🎶",
+latin:"Luscinia megarhynchos",
+desc:"A legendary night singer — chaotic, beautiful, almost human in complexity.",
+sound:"bursting trills and cascading phrases in the dark",
+gbif:2492321
+},
+{
+name:"Robin 🟥",
+latin:"Erithacus rubecula",
+desc:"A winter singer — fragile, emotional, strangely intimate.",
+sound:"thin silver notes hanging in cold air",
+gbif:2492295
+}
 ];
 
-/* =========================
-   MAP INIT
-========================= */
-function initMap(){
-  map = L.map('map').setView([lat,lng],10);
+const plants = [
+{
+name:"Lavender 💜",
+latin:"Lavandula angustifolia",
+desc:"Calming Mediterranean scent used for sleep and relaxation.",
+smell:"dry floral calm with herbal softness",
+gbif:3172453
+},
+{
+name:"Honeysuckle 🌸",
+latin:"Lonicera periclymenum",
+desc:"One of the strongest evening fragrances in the British countryside.",
+smell:"sweet nectar-like scent intensifying at dusk",
+gbif:3172678
+},
+{
+name:"Wild Garlic 🌿",
+latin:"Allium ursinum",
+desc:"Spring woodland smell that takes over entire forests.",
+smell:"sharp green garlic burst in damp air",
+gbif:2856885
+}
+];
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap'
-  }).addTo(map);
+function switchTab(t){
+current=t;
+document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+event.target.classList.add("active");
+render();
 }
 
-/* =========================
-   GBIF
-========================= */
-async function getKey(name){
-  const r = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(name)}`);
-  const d = await r.json();
-  return d.usageKey;
+function render(){
+const data = current==="birds"?birds:plants;
+const grid = document.getElementById("grid");
+grid.innerHTML="";
+
+data.forEach(async item=>{
+const div=document.createElement("div");
+div.className="card";
+
+let extra = "";
+
+if(current==="birds"){
+extra = "🎧 sound: " + item.sound;
+} else {
+extra = "🌸 scent: " + item.smell;
 }
 
-async function getOcc(key){
-  const r = await fetch(
-    `https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&limit=12&decimalLatitude=${lat-1},${lat+1}&decimalLongitude=${lng-1},${lng+1}`
-  );
-  const d = await r.json();
-  return d.results || [];
+div.innerHTML=`
+<h3>${item.name}</h3>
+<div class="latin">${item.latin}</div>
+<div class="desc">${item.desc}</div>
+<div class="meta">${extra}</div>
+`;
+
+grid.appendChild(div);
+
+loadGBIF(item.gbif, div);
+});
 }
 
-/* =========================
-   AUDIO (XENO-CANTO)
-========================= */
-async function getAudio(latin){
-  try{
-    const r = await fetch(`https://xeno-canto.org/api/2/recordings?query=${latin}`);
-    const d = await r.json();
-    return d.recordings?.[0]?.file || null;
-  } catch {
-    return null;
-  }
+async function loadGBIF(key, el){
+try{
+const r = await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&limit=0`);
+const d = await r.json();
+const count = d.count || 0;
+
+const tag = document.createElement("div");
+tag.style.marginTop="8px";
+tag.style.fontSize="11px";
+tag.style.color="#7aad8a";
+tag.innerText = lat ? `${count} nearby records` : `${count.toLocaleString()} global records`;
+
+el.appendChild(tag);
+}catch(e){}
 }
 
-/* =========================
-   LOAD UI
-========================= */
-async function load(){
+async function searchLocation(){
+const q = document.getElementById("loc").value;
+if(!q) return;
 
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
+const r = await fetch(`https://us1.locationiq.com/v1/search.php?key=${GEO_KEY}&q=${encodeURIComponent(q)}&format=json`);
+const d = await r.json();
 
-  map.eachLayer(l=>{
-    if(l instanceof L.Marker) map.removeLayer(l);
-  });
+lat = d[0].lat;
+lon = d[0].lon;
 
-  for(const s of SPECIES){
+document.getElementById("banner").innerText =
+`Showing wildlife near ${d[0].display_name}`;
 
-    const card = document.createElement("div");
-    card.className = "card";
-
-    card.innerHTML = `
-      <div class="title">${s.name}</div>
-      <div class="latin">${s.latin}</div>
-      <div class="meta">${s.note || ""}</div>
-      <div class="meta">${s.scent ? "🌸 " + s.scent : "🎧 Loading soundscape..."}</div>
-      <div class="meta">Loading nearby nature data…</div>
-    `;
-
-    grid.appendChild(card);
-
-    const key = await getKey(s.latin);
-    if(!key){
-      card.querySelectorAll(".meta")[1].textContent = "Not found in GBIF";
-      continue;
-    }
-
-    const occ = await getOcc(key);
-
-    card.querySelectorAll(".meta")[1].textContent =
-      `${occ.length} nearby records`;
-
-    occ.forEach(o=>{
-      if(o.decimalLatitude && o.decimalLongitude){
-        L.marker([o.decimalLatitude,o.decimalLongitude])
-          .addTo(map)
-          .bindPopup(s.name);
-      }
-    });
-
-    if(s.sound){
-
-      const audioUrl = await getAudio(s.latin);
-
-      if(audioUrl){
-        const a = document.createElement("audio");
-        a.controls = true;
-        a.src = audioUrl;
-        card.appendChild(a);
-      } else {
-        const m = document.createElement("div");
-        m.className="meta";
-        m.textContent="No recording found";
-        card.appendChild(m);
-      }
-    }
-  }
+render();
 }
 
-/* =========================
-   START
-========================= */
-initMap();
-load();
+function gps(){
+navigator.geolocation.getCurrentPosition(async pos=>{
+lat=pos.coords.latitude;
+lon=pos.coords.longitude;
 
+document.getElementById("banner").innerText="Showing wildlife near your location";
+render();
+});
+}
+
+render();
 </script>
 
 </body>
