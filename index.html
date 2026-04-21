@@ -1,224 +1,144 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Senses — Bird Song & Botanical Fragrance</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Josefin+Sans:wght@200;300;400&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
-
-<style>
-/* ===== KEEPING YOUR ORIGINAL STYLES (UNCHANGED FOR BREVITY) ===== */
-body{margin:0;font-family:serif;background:#1a1428;color:#f0ead8;}
-button,input{font-family:inherit}
-.hero{text-align:center;padding:40px}
-.loc-input{padding:10px;width:280px}
-.loc-btn,.loc-me-btn{padding:10px 14px;cursor:pointer}
-.species-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:20px}
-.species-card{padding:16px;border:1px solid rgba(255,255,255,0.1);border-radius:12px}
-.tab-nav{text-align:center;margin:20px}
-.tab-btn{margin:4px;padding:10px 20px}
-.visible{display:block}
-.species-section{display:none}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;padding:10px 20px;opacity:0;transition:0.3s}
-.toast.show{opacity:1}
-</style>
-</head>
-
-<body>
-
-<div class="hero">
-  <h1>The Songs & Scents</h1>
-
-  <input class="loc-input" id="loc-input" placeholder="Search location…">
-  <button class="loc-btn" onclick="searchLocation()">Find</button>
-  <button class="loc-me-btn" onclick="useGPS()">📍</button>
-</div>
-
-<div class="tab-nav">
-  <button class="tab-btn" onclick="switchTab('bird')">Birds</button>
-  <button class="tab-btn" onclick="switchTab('plant')">Plants</button>
-</div>
-
-<div id="section-bird" class="species-section visible">
-  <div id="bird-grid" class="species-grid"></div>
-</div>
-
-<div id="section-plant" class="species-section">
-  <div id="plant-grid" class="species-grid"></div>
-</div>
-
-<div class="toast" id="toast"></div>
-
 <script>
-/* =======================
-   LOCATION IQ KEY
-======================= */
-const LOCATIONIQ_KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
+document.addEventListener("DOMContentLoaded", () => {
 
-/* =======================
-   STATE
-======================= */
-let userLat = null;
-let userLng = null;
-let locationName = null;
+/* ================= API ================= */
+const KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
 
-/* =======================
-   SIMPLE DATA (trimmed safe test version)
-======================= */
-const BIRDS = [
-  { name:"Blackbird", latin:"Turdus merula", emoji:"🐦", quality:5, description:"Mellow dawn song", tags:["garden"], season:"year-round", gbif_key:5789749 },
-  { name:"Robin", latin:"Erithacus rubecula", emoji:"🐦", quality:4, description:"Soft winter song", tags:["garden"], season:"year-round", gbif_key:2492295 }
-];
+/* ================= STATE ================= */
+let lat = 51.5;
+let lng = -0.1;
+let type = "bird";
+let map;
+let markers = [];
+let cache = {};
 
-const PLANTS = [
-  { name:"Lavender", latin:"Lavandula angustifolia", emoji:"🌿", quality:5, description:"Calming scent", tags:["herb"], season:"summer", gbif_key:3172453 },
-  { name:"Rose", latin:"Rosa canina", emoji:"🌹", quality:4, description:"Classic floral scent", tags:["flower"], season:"summer", gbif_key:3032856 }
-];
+/* ================= DATA ================= */
+const DATA = {
+  bird: [
+    { name:"Blackbird", id:5789749 },
+    { name:"Robin", id:2492295 },
+    { name:"Skylark", id:2491576 }
+  ],
+  plant: [
+    { name:"Lavender", id:3172453 },
+    { name:"Rose", id:3032856 },
+    { name:"Heather", id:2876946 }
+  ]
+};
 
-/* =======================
-   RENDER CARDS
-======================= */
-function renderCards(type){
-  const data = type === "bird" ? BIRDS : PLANTS;
-  const grid = document.getElementById(type === "bird" ? "bird-grid" : "plant-grid");
+/* ================= MAP INIT ================= */
+function initMap(){
+  map = L.map('map', {
+    zoomControl: true
+  }).setView([lat, lng], 10);
 
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© OpenStreetMap'
+  }).addTo(map);
+}
+
+/* ================= FIX CLICK ISSUE (IMPORTANT) ================= */
+function fixMapClickBlocking(){
+  const mapEl = document.getElementById("map");
+  mapEl.style.pointerEvents = "auto";
+  mapEl.style.zIndex = "1";
+}
+
+/* ================= MARKERS ================= */
+function clearMarkers(){
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+}
+
+/* ================= LOAD ================= */
+async function load(){
+  const grid = document.getElementById("grid");
   grid.innerHTML = "";
+  clearMarkers();
 
-  data.forEach((item, i) => {
-    const card = document.createElement("div");
-    card.className = "species-card";
+  for(const item of DATA[type]){
 
-    const dots = Array.from({length:5}, (_,j) =>
-      `<span style="opacity:${j < item.quality ? 1 : 0.2}">●</span>`
-    ).join("");
+    const key = `${item.id}-${lat.toFixed(2)}-${lng.toFixed(2)}`;
 
-    card.innerHTML = `
-      <div style="font-size:30px">${item.emoji}</div>
-      <h3>${item.name}</h3>
-      <div><em>${item.latin}</em></div>
-      <p>${item.description}</p>
-      <div>${dots}</div>
-      <small>${item.season}</small>
-    `;
+    let count;
+    if(cache[key]){
+      count = cache[key];
+    } else {
+      const url =
+        `https://api.gbif.org/v1/occurrence/search?taxonKey=${item.id}&limit=0&decimalLatitude=${lat-0.5},${lat+0.5}&decimalLongitude=${lng-0.5},${lng+0.5}`;
 
-    grid.appendChild(card);
-
-    setTimeout(() => loadOccurrences(item, type, i), 100);
-  });
-}
-
-/* =======================
-   GBIF (SAFE FIXED)
-======================= */
-async function loadOccurrences(item, type, index){
-  try {
-    let url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${item.gbif_key}&limit=0`;
-
-    if(userLat && userLng){
-      const d = 0.3;
-      url += `&decimalLatitude=${userLat-d},${userLat+d}&decimalLongitude=${userLng-d},${userLng+d}`;
-    }
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    console.log(item.name, data.count);
-  } catch(e){
-    console.log("GBIF error", e);
-  }
-}
-
-/* =======================
-   LOCATION SEARCH (FIXED)
-======================= */
-async function searchLocation(){
-  const q = document.getElementById("loc-input").value;
-  if(!q) return;
-
-  showToast("Searching...");
-
-  try {
-    const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(q)}&format=json`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if(!data.length){
-      showToast("Not found");
-      return;
-    }
-
-    userLat = parseFloat(data[0].lat);
-    userLng = parseFloat(data[0].lon);
-    locationName = data[0].display_name.split(",")[0];
-
-    showToast("Location set: " + locationName);
-    reloadOccurrences();
-
-  } catch(e){
-    showToast("Error");
-  }
-}
-
-/* =======================
-   GPS (FIXED)
-======================= */
-function useGPS(){
-  navigator.geolocation.getCurrentPosition(async pos => {
-    userLat = pos.coords.latitude;
-    userLng = pos.coords.longitude;
-
-    try {
-      const url = `https://us1.locationiq.com/v1/reverse.php?key=${LOCATIONIQ_KEY}&lat=${userLat}&lon=${userLng}&format=json`;
       const res = await fetch(url);
       const data = await res.json();
-
-      locationName = data.address?.city || "your location";
-      showToast("Detected: " + locationName);
-
-    } catch {
-      locationName = "your location";
+      count = data.count || 0;
+      cache[key] = count;
     }
 
-    reloadOccurrences();
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<b>${item.name}</b><br>${count.toLocaleString()} records`;
+    grid.appendChild(div);
 
+    if(count > 0){
+      const marker = L.marker([
+        lat + (Math.random()-0.5)*0.3,
+        lng + (Math.random()-0.5)*0.3
+      ])
+      .addTo(map)
+      .bindPopup(`${item.name}<br>${count} records`);
+
+      markers.push(marker);
+    }
+  }
+}
+
+/* ================= TAB ================= */
+window.setType = function(t){
+  type = t;
+  load();
+};
+
+/* ================= LOCATION ================= */
+window.search = async function(){
+  const q = document.getElementById("loc").value;
+  if(!q) return;
+
+  toast("Searching...");
+
+  const res = await fetch(
+    `https://us1.locationiq.com/v1/search.php?key=${KEY}&q=${encodeURIComponent(q)}&format=json`
+  );
+
+  const data = await res.json();
+  if(!data.length) return toast("Not found");
+
+  lat = parseFloat(data[0].lat);
+  lng = parseFloat(data[0].lon);
+
+  map.setView([lat, lng], 10);
+  load();
+};
+
+window.gps = function(){
+  navigator.geolocation.getCurrentPosition(async p=>{
+    lat = p.coords.latitude;
+    lng = p.coords.longitude;
+    map.setView([lat, lng], 10);
+    load();
   });
-}
+};
 
-/* =======================
-   TAB SWITCH
-======================= */
-function switchTab(tab){
-  document.getElementById("section-bird").classList.toggle("visible", tab==="bird");
-  document.getElementById("section-plant").classList.toggle("visible", tab==="plant");
-}
-
-/* =======================
-   RELOAD
-======================= */
-function reloadOccurrences(){
-  renderCards("bird");
-  renderCards("plant");
-}
-
-/* =======================
-   TOAST
-======================= */
-function showToast(msg){
+/* ================= TOAST ================= */
+function toast(msg){
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-/* =======================
-   INIT
-======================= */
-renderCards("bird");
-renderCards("plant");
+/* ================= START ================= */
+initMap();
+fixMapClickBlocking();
+load();
 
+});
 </script>
-
-</body>
-</html>
