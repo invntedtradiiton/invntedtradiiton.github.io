@@ -1,305 +1,626 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>get out — nature field guide</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Josefin+Sans:wght@200;300;400&display=swap" rel="stylesheet">
-
-<!-- MAP -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Josefin+Sans:wght@200;300;400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <style>
-:root{
-  --bg:#0f0c18;
-  --card:#1c1729;
-  --gold:#c9a84c;
-  --text:#f3eddc;
-  --muted:#a9a39a;
-  --green:#7aad8a;
-  --blue:#7ab8d4;
+:root {
+  --bg: #0f0c18;
+  --card: #1c1729;
+  --gold: #c9a84c;
+  --gold-dim: rgba(201,168,76,0.3);
+  --text: #f3eddc;
+  --muted: #9a9490;
+  --green: #7aad8a;
+  --blue: #7ab8d4;
+  --border: rgba(255,255,255,0.08);
 }
 
-*{margin:0;padding:0;box-sizing:border-box}
+* { margin:0; padding:0; box-sizing:border-box; }
 
-body{
-  font-family:'Josefin Sans',sans-serif;
-  background:radial-gradient(circle at top,#1d1630,#0f0c18);
-  color:var(--text);
-  overflow-x:hidden;
+body {
+  font-family: 'Josefin Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
-/* HERO */
-.hero{
-  text-align:center;
-  padding:70px 20px 20px;
+/* ── HERO ── */
+.hero {
+  text-align: center;
+  padding: 60px 20px 30px;
+  background: radial-gradient(ellipse at top, #2a1d4a 0%, transparent 70%);
 }
 
-.hero h1{
-  font-family:'Cormorant Garamond';
-  font-size:64px;
-  font-weight:300;
+.hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(48px, 8vw, 80px);
+  font-weight: 300;
+  letter-spacing: -1px;
+  color: var(--text);
 }
 
-.hero p{
-  max-width:650px;
-  margin:10px auto;
-  color:var(--muted);
-  line-height:1.6;
+.hero h1 em { font-style: italic; color: var(--gold); }
+
+.hero p {
+  max-width: 560px;
+  margin: 12px auto 0;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 1px;
+  line-height: 1.7;
 }
 
-/* SEARCH */
-.search{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-  flex-wrap:wrap;
-  margin-top:15px;
+/* ── SEARCH ── */
+.search {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 24px 0 10px;
 }
 
-input{
-  padding:12px 16px;
-  border-radius:30px;
-  border:1px solid rgba(255,255,255,0.2);
-  background:rgba(255,255,255,0.05);
-  color:white;
-  width:260px;
+.search input {
+  padding: 11px 20px;
+  border-radius: 30px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 13px;
+  width: 260px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search input:focus { border-color: var(--gold-dim); }
+.search input::placeholder { color: var(--muted); }
+
+.btn {
+  padding: 11px 20px;
+  border-radius: 30px;
+  border: 1px solid var(--gold-dim);
+  background: transparent;
+  color: var(--gold);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-gps { border-color: rgba(255,255,255,0.15); color: var(--muted); font-size: 14px; letter-spacing: 0; }
+.btn-gps:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+/* ── MAP ── */
+#map {
+  height: 300px;
+  max-width: 1100px;
+  margin: 16px auto;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: block;
 }
 
-button{
-  padding:12px 18px;
-  border-radius:30px;
-  border:1px solid var(--gold);
-  background:transparent;
-  color:var(--gold);
-  cursor:pointer;
+/* darken OSM tiles */
+.leaflet-tile-pane { filter: saturate(0.4) brightness(0.55); }
+
+/* leaflet popup */
+.leaflet-popup-content-wrapper {
+  background: rgba(18,13,32,0.97) !important;
+  border: 1px solid var(--gold-dim) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6) !important;
+}
+.leaflet-popup-content { color: var(--text) !important; font-family: 'Josefin Sans',sans-serif !important; font-size: 12px !important; letter-spacing: 1px; }
+.leaflet-popup-tip { background: rgba(18,13,32,0.97) !important; }
+.leaflet-popup-close-button { color: var(--muted) !important; }
+.leaflet-control-zoom a { background: rgba(18,13,32,0.9) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.leaflet-control-attribution { background: rgba(18,13,32,0.6) !important; color: rgba(255,255,255,0.3) !important; font-size: 8px !important; }
+.leaflet-control-attribution a { color: rgba(255,255,255,0.4) !important; }
+
+/* ── OCCURRENCE MARKERS ON MAP ── */
+.map-controls {
+  max-width: 1100px;
+  margin: 0 auto 6px;
+  padding: 0 4px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.map-filter { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'Josefin Sans',sans-serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.map-filter:hover { color: var(--text); }
+.map-filter.on-bird { background: rgba(122,184,212,0.15); border-color: rgba(122,184,212,0.4); color: var(--blue); }
+.map-filter.on-plant { background: rgba(122,173,138,0.15); border-color: rgba(122,173,138,0.4); color: var(--green); }
+.map-filter.on-all { background: rgba(201,168,76,0.12); border-color: var(--gold-dim); color: var(--gold); }
+.map-load { margin-left: auto; }
+.map-status { font-size: 10px; color: var(--muted); letter-spacing: 1px; font-style: italic; }
+
+/* ── BANNER ── */
+.banner {
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 4px 0 20px;
+  min-height: 18px;
+}
+.banner strong { color: var(--gold); font-weight: 300; }
+
+/* ── TABS ── */
+.tabs {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 28px;
+}
+.tab {
+  padding: 11px 30px;
+  border: 1px solid var(--border);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.tab:first-child { border-radius: 30px 0 0 30px; }
+.tab:last-child { border-radius: 0 30px 30px 0; border-left: none; }
+.tab.active-bird { background: rgba(122,184,212,0.12); border-color: rgba(122,184,212,0.35); color: var(--blue); }
+.tab.active-plant { background: rgba(122,173,138,0.12); border-color: rgba(122,173,138,0.35); color: var(--green); }
+
+/* ── GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+  padding: 0 20px 80px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-/* MAP */
-#map{
-  height:280px;
-  max-width:1100px;
-  margin:20px auto;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,0.1);
-  overflow:hidden;
+/* ── CARD ── */
+.card {
+  background: linear-gradient(145deg, #1c1729, #15101f);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: transform 0.25s, border-color 0.25s;
+  cursor: default;
+  animation: fadeUp 0.4s ease forwards;
+  opacity: 0;
+}
+@keyframes fadeUp { to { opacity:1; transform: none; } }
+.card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.15); }
+
+.card-top { display: flex; align-items: flex-start; gap: 12px; }
+.card-emoji { font-size: 32px; line-height: 1; flex-shrink: 0; }
+.card-right { flex: 1; min-width: 0; }
+
+.card-rank { font-size: 9px; letter-spacing: 2px; color: rgba(255,255,255,0.2); margin-bottom: 2px; }
+.card-name { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 600; color: var(--text); line-height: 1.1; }
+.card-latin { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.card-quality { display: flex; gap: 3px; margin: 10px 0 8px; }
+.qdot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+.qdot.on { background: var(--dot-col, var(--gold)); }
+
+.card-note {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 8px;
+  line-height: 1.4;
 }
 
-/* TABS */
-.tabs{
-  display:flex;
-  justify-content:center;
-  margin:25px 0;
+.card-desc {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: rgba(243,237,220,0.7);
 }
 
-.tab{
-  padding:12px 24px;
-  border:1px solid rgba(255,255,255,0.15);
-  cursor:pointer;
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
+.card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.tag { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 8px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted); }
 
-.tab.active{
-  background:rgba(122,184,212,0.15);
-  color:var(--blue);
+.gbif-link { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-dim); text-decoration: none; white-space: nowrap; transition: color 0.2s; }
+.gbif-link:hover { color: var(--gold); }
+
+.occ-count { font-size: 10px; color: var(--green); letter-spacing: 0.5px; margin-top: 6px; }
+.occ-count.dim { color: var(--muted); }
+
+/* wave / scent anims */
+.card-anim { display: inline-flex; align-items: center; gap: 2px; height: 12px; vertical-align: middle; margin-left: 5px; opacity: 0; transition: opacity 0.2s; }
+.card:hover .card-anim { opacity: 1; }
+.wb { width: 2px; border-radius: 2px; background: var(--blue); animation: wv 0.8s ease-in-out infinite alternate; }
+.wb:nth-child(2){animation-delay:.15s} .wb:nth-child(3){animation-delay:.3s} .wb:nth-child(4){animation-delay:.15s}
+@keyframes wv { from{height:3px} to{height:11px} }
+.sd { width: 4px; height: 4px; border-radius: 50%; background: var(--green); animation: sdf 1.4s ease-in-out infinite; }
+.sd:nth-child(2){animation-delay:.3s;width:3px;height:3px} .sd:nth-child(3){animation-delay:.6s;width:5px;height:5px}
+@keyframes sdf { 0%,100%{transform:translateY(0);opacity:.8} 50%{transform:translateY(-5px);opacity:.3} }
+
+/* toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px);
+  background: rgba(18,13,32,0.97); border: 1px solid var(--gold-dim);
+  color: var(--text); padding: 9px 20px; border-radius: 20px;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  z-index: 9999; opacity: 0; transition: all 0.3s; pointer-events: none;
 }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* GRID */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:16px;
-  padding:0 20px 60px;
-  max-width:1200px;
-  margin:auto;
-}
-
-/* CARD */
-.card{
-  background:linear-gradient(145deg,#1c1729,#15101f);
-  border:1px solid rgba(255,255,255,0.08);
-  padding:18px;
-  border-radius:16px;
-  transition:0.3s;
-}
-
-.card:hover{
-  transform:translateY(-4px);
-}
-
-.card h3{font-size:18px}
-.latin{color:var(--muted);font-size:12px;font-style:italic}
-.desc{margin-top:10px;font-size:13px;line-height:1.5}
-.meta{margin-top:10px;font-size:12px;color:var(--gold)}
-
-.banner{
-  text-align:center;
-  color:var(--muted);
-  font-size:13px;
-  margin-top:10px;
+@media(max-width:600px) {
+  .hero h1 { font-size: 48px; }
+  .search input { width: 100%; }
+  #map { height: 220px; margin: 10px 10px; }
+  .grid { grid-template-columns: 1fr; padding: 0 12px 60px; }
 }
 </style>
 </head>
-
 <body>
 
+<!-- HERO -->
 <div class="hero">
-  <h1>get out</h1>
-  <p>
-    A field guide to soothing birdsong and fragrant plants near you.
-    Built to get you outside and actually experience nature.
-  </p>
-
+  <h1>get <em>out</em></h1>
+  <p>A field guide to soothing birdsong and fragrant plants near you.<br>Built to get you outside and actually experience nature.</p>
   <div class="search">
-    <input id="loc" placeholder="Search place (e.g. London)" />
-    <button onclick="searchLocation()">Search</button>
-    <button onclick="gps()">📍 my location</button>
+    <input id="loc" placeholder="Search a place — e.g. Epping Forest" onkeydown="if(event.key==='Enter')doSearch()"/>
+    <button class="btn" id="search-btn" onclick="doSearch()">Search</button>
+    <button class="btn btn-gps" onclick="doGPS()" title="Use my location">📍</button>
   </div>
 </div>
 
+<!-- MAP -->
+<div class="map-controls">
+  <button class="map-filter on-all" id="mf-all" onclick="setFilter('all')">🌿 All</button>
+  <button class="map-filter" id="mf-bird" onclick="setFilter('bird')">🎵 Birds</button>
+  <button class="map-filter" id="mf-plant" onclick="setFilter('plant')">🌸 Plants</button>
+  <button class="btn map-load" id="map-load-btn" onclick="loadMapPoints()" style="padding:6px 16px;font-size:9px">Plot occurrences</button>
+  <span class="map-status" id="map-status"></span>
+</div>
 <div id="map"></div>
-
 <div class="banner" id="banner"></div>
 
+<!-- TABS -->
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('birds')">🎵 birds</div>
-  <div class="tab" onclick="switchTab('plants')">🌿 plants</div>
+  <div class="tab active-bird" id="tab-bird" onclick="switchTab('bird')">🎵 &nbsp;soothing birds</div>
+  <div class="tab" id="tab-plant" onclick="switchTab('plant')">🌿 &nbsp;fragrant plants</div>
 </div>
 
-<div id="grid" class="grid"></div>
+<!-- GRID -->
+<div class="grid" id="grid"></div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-const GEO_KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
-
-let lat=null, lon=null;
-let map, marker;
-let current="birds";
-
-const birds=[
-{
-name:"Blackbird 🐦",
-latin:"Turdus merula",
-desc:"Rich, fluted dawn song like improvisational jazz.",
-sound:"liquid whistles in evening air",
-gbif:5789749
-},
-{
-name:"Nightingale 🎶",
-latin:"Luscinia megarhynchos",
-desc:"One of nature’s most complex night songs.",
-sound:"explosive trills in darkness",
-gbif:2492321
-}
+// ── DATA: 30 SOOTHING BIRDS ──────────────────────────────────
+const BIRDS = [
+  {n:"Common Nightingale",la:"Luscinia megarhynchos",e:"🐦",g:2492321,q:5,season:"Spring nights",note:"Rich liquid trills & complex phrases",tags:["nocturnal","woodland","migratory"],d:"Widely held as the world's most beautiful songbird. Its nocturnal cascades — liquid trills, bubbling phrases, rich whistles — have inspired poets from Keats to Coleridge. Hear it from hedgerows on warm May evenings."},
+  {n:"Blackbird",la:"Turdus merula",e:"🐦‍⬛",g:5789749,q:5,season:"Dawn & dusk",note:"Mellow unhurried fluting phrases",tags:["garden","urban","year-round"],d:"The blackbird's fluting song is the quintessential British dawn soundtrack. Each phrase is composed on the spot — inventive, melodic, never repeated. Often the last voice of dusk too."},
+  {n:"Wood Thrush",la:"Hylocichla mustelina",e:"🐦",g:2489897,q:5,season:"Dawn",note:"Bell-like ee-oh-lay flutes",tags:["forest","USA","migratory"],d:"In Eastern American forests, the wood thrush's clear, bell-like 'ee-oh-lay' carries through mist at first light. Its flute-like notes echo off cathedral trees in a way that stills the mind completely."},
+  {n:"Song Thrush",la:"Turdus philomelos",e:"🐦",g:5789758,q:5,season:"Spring & summer",note:"Melodic phrases repeated 2–3 times",tags:["garden","Europe","migratory"],d:"Unlike other thrushes, the song thrush repeats each musical phrase two or three times as if carefully teaching itself. Standing on a rooftop or treetop, it delivers one of the garden's most composed recitals."},
+  {n:"Hermit Thrush",la:"Catharus guttatus",e:"🐦",g:2489898,q:5,season:"Twilight",note:"Ascending ethereal spiral phrases",tags:["mountain","USA","forest"],d:"Called America's greatest singer by many naturalists. Its song begins on a single note then spirals upward through ascending phrases — ethereal, meditative, like a flute played in a cathedral of pines."},
+  {n:"Blackcap",la:"Sylvia atricapilla",e:"🐦",g:2492354,q:5,season:"Spring & summer",note:"Rich, loud, fluting phrases",tags:["woodland","migratory","Europe"],d:"Sometimes called the 'northern nightingale', the blackcap's song rises in rich, confident phrases. The best performances rival any classical composition."},
+  {n:"Tawny Owl",la:"Strix aluco",e:"🦉",g:2495260,q:5,season:"Autumn & winter",note:"Classic quavering hoot",tags:["nocturnal","woodland","Europe"],d:"The tawny owl's resonant, trembling hoot through autumn woodland is one of nature's most atmospheric sounds — the quintessential wild voice of Britain at rest."},
+  {n:"Curlew",la:"Numenius arquata",e:"🐦",g:2476212,q:5,season:"Spring & summer",note:"Haunting rising bubbling call",tags:["moorland","upland","Europe"],d:"The curlew's long, bubbling, rising call across a moorland or estuary at dusk is one of Britain's most haunting sounds — wild, lonely, and beautiful in a way that is almost unbearably moving."},
+  {n:"Golden Oriole",la:"Oriolus oriolus",e:"🌟",g:2490143,q:5,season:"Summer",note:"Rich tropical fluty whistle",tags:["rare","Europe","summer visitor"],d:"The golden oriole's song sounds like it belongs in a tropical rainforest — a rich, liquid 'weela-weeoo' that carries through poplar canopies. Shockingly beautiful; shockingly rare to hear in Britain."},
+  {n:"European Robin",la:"Erithacus rubecula",e:"🐦",g:2492295,q:4,season:"All year",note:"Wistful silvery warbling",tags:["garden","Europe","winter song"],d:"The robin sings even through the dark of winter, a thin silvery warble that sounds wistful and intimate. The only British bird that sings every month of the year."},
+  {n:"Eurasian Wren",la:"Troglodytes troglodytes",e:"🐦",g:2492276,q:4,season:"Year-round",note:"Explosive crystalline trills",tags:["woodland","tiny","powerful"],d:"Britain's smallest common bird produces its continent's loudest song relative to body size. A wren on a mossy stone, pumping out ten notes per second in crystalline cascades — astonishing."},
+  {n:"Willow Warbler",la:"Phylloscopus trochilus",e:"🐦",g:2491959,q:4,season:"Spring & summer",note:"Cascading silvery descending scale",tags:["woodland","migratory","Europe"],d:"A cascade of silvery notes descending gently like water over stones — perhaps the most beautiful simple song of any British bird. Each phrase falls through the scale with perfect grace."},
+  {n:"Blackbird at Dusk",la:"Turdus merula",e:"🌙",g:5789749,q:4,season:"Evening",note:"Mellow twilight phrases",tags:["garden","dusk","meditative"],d:"The blackbird at dusk sings differently from dawn — slower, more reflective phrases in failing light. The sound of a summer evening winding down is inseparable from this bird."},
+  {n:"Chaffinch",la:"Fringilla coelebs",e:"🐦",g:2493011,q:4,season:"Spring",note:"Bright accelerating crescendo",tags:["garden","common","Europe"],d:"The chaffinch's familiar song — an accelerating, descending rattle finishing in a flourish — is the most counted birdsong in Britain. The cheerful warm-up act of the dawn chorus."},
+  {n:"Treecreeper",la:"Certhia familiaris",e:"🐦",g:2492239,q:4,season:"Year-round",note:"Thin descending silvery thread",tags:["woodland","specialist","Europe"],d:"Spiralling up a bark trunk, the treecreeper produces a thread of silvery sound so thin it seems to come from nowhere and everywhere at once. Easy to miss; unforgettable once found."},
+  {n:"Garden Warbler",la:"Sylvia borin",e:"🐦",g:2492372,q:4,season:"Summer",note:"Sustained mellow babbling",tags:["scrub","migratory","Europe"],d:"The garden warbler sings in long, sustained, mellow paragraphs — a gentle, rolling babble without obvious structure. The most restful of all the warblers, like listening to a stream."},
+  {n:"Wood Pigeon",la:"Columba palumbus",e:"🕊️",g:2495373,q:4,season:"Year-round",note:"Drowsy five-note cooing",tags:["garden","common","soporific"],d:"The wood pigeon's drowsy five-note cooing is the most soporific sound in the British countryside. Heard on a warm afternoon through a window — it is the sound of stillness itself."},
+  {n:"Skylark",la:"Alauda arvensis",e:"🐦",g:2491576,q:4,season:"Spring & summer",note:"Continuous aerial cascading warble",tags:["farmland","hovering","Europe"],d:"Rising vertically on trembling wings, the skylark pours down an unbroken stream of liquid notes. Its song can last twenty minutes without pause — a meditation in sound from above."},
+  {n:"Dipper",la:"Cinclus cinclus",e:"🐦",g:2492208,q:4,season:"Year-round",note:"Clear warbling over rushing water",tags:["stream","upland","Europe"],d:"Standing on a midstream boulder, the dipper sings a clear warble that blends perfectly with rushing water. Arguably the most perfectly placed song in nature — the sound and setting are inseparable."},
+  {n:"Common Redstart",la:"Phoenicurus phoenicurus",e:"🐦",g:2492290,q:4,season:"Spring & summer",note:"Melancholy fluting warble",tags:["woodland","migratory","Europe"],d:"The redstart's song has a slightly melancholy, questioning quality — each phrase rises and falls with searching beauty. One of the real treats of a May morning in open oak woodland."},
+  {n:"Marsh Warbler",la:"Acrocephalus palustris",e:"🐦",g:2492445,q:4,season:"Summer",note:"Complex mimicry of 100+ species",tags:["wetland","migratory","mimic"],d:"The marsh warbler memorises the songs of over a hundred African and European species and weaves them into its own continuous, endlessly inventive improvisation — the jazz musician of the bird world."},
+  {n:"Eurasian Skylark",la:"Alauda arvensis",e:"🌤️",g:2491576,q:4,season:"Spring",note:"Hovering 200ft up, non-stop warble",tags:["open country","iconic","Europe"],d:"No other bird sings its heart out from the sky like the skylark — hovering hundreds of feet up, pouring down song. The very definition of unselfconscious, abundant joy."},
+  {n:"Chiffchaff",la:"Phylloscopus collybita",e:"🐦",g:2491957,q:3,season:"Spring & summer",note:"Cheerful repeated own-name call",tags:["woodland","migratory","spring herald"],d:"The chiffchaff names itself — a cheerful 'chiff-chaff-chiff-chaff' that is usually the first sign spring has truly returned. Reliable, optimistic, perfectly simple."},
+  {n:"Common Cuckoo",la:"Cuculus canorus",e:"🐦",g:2495889,q:3,season:"Spring",note:"Iconic resonant two-note call",tags:["migratory","iconic","Europe"],d:"Nothing marks the arrival of a British spring quite like the first cuckoo call drifting across a valley. Two notes, perfectly timed, echoing through morning mist."},
+  {n:"Sedge Warbler",la:"Acrocephalus schoenobaenus",e:"🐦",g:2492437,q:3,season:"Spring & summer",note:"Scratchy, varied, exuberant",tags:["wetland","migratory","Europe"],d:"From a perch on a bulrush, the sedge warbler delivers an exuberant, chattering jumble — scratchy and sweet by turns, endlessly variable. The soundtrack of a productive marshland morning."},
+  {n:"Yellowhammer",la:"Emberiza citrinella",e:"🐦",g:2492849,q:3,season:"Summer",note:"Wheezy phrase with drawn-out ending",tags:["farmland","hedgerow","Europe"],d:"The yellowhammer's lazy, sun-drenched phrasing is the sound of a warm English afternoon — the same unhurried line, over and over, from a wire in a heat-hazy field."},
+  {n:"Dunnock",la:"Prunella modularis",e:"🐦",g:2492307,q:3,season:"Year-round",note:"Bright even-paced warbling",tags:["garden","overlooked","Europe"],d:"The dunnock is often overlooked, but its bright, fast-paced warbling is one of the cheeriest of garden songs — a reminder that beauty is sometimes hiding in plain sight."},
+  {n:"Little Owl",la:"Athene noctua",e:"🦉",g:2495234,q:3,season:"Dusk",note:"Mournful 'kiew' calls at dusk",tags:["farmland","dusk","Europe"],d:"The little owl's mournful yelping call across a quiet evening orchard is curiously touching — not beautiful exactly, but deeply evocative of landscape and wildness."},
+  {n:"Nuthatch",la:"Sitta europaea",e:"🐦",g:2491888,q:3,season:"Spring",note:"Loud ringing repeated notes",tags:["woodland","acrobatic","Europe"],d:"The nuthatch's loud, ringing calls carry through woodland with cheerful confidence — a bird that walks headfirst down trees and sings like it owns the forest."},
+  {n:"Common Swift",la:"Apus apus",e:"🌀",g:2236636,q:3,season:"Summer",note:"Screaming parties overhead",tags:["urban","aerial","summer"],d:"Swifts don't sing so much as scream — but their shrieking parties wheeling over summer rooftops on warm evenings carry a wild joy that's among the most uplifting sounds of the season."},
 ];
 
-const plants=[
-{
-name:"Lavender 💜",
-latin:"Lavandula angustifolia",
-desc:"Calming Mediterranean floral scent.",
-smell:"dry floral herbal calm",
-gbif:3172453
-},
-{
-name:"Honeysuckle 🌸",
-latin:"Lonicera periclymenum",
-desc:"Intense evening fragrance in hedgerows.",
-smell:"sweet nectar-like dusk scent",
-gbif:3172678
-}
+// ── DATA: 30 FRAGRANT PLANTS ─────────────────────────────────
+const PLANTS = [
+  {n:"Common Lilac",la:"Syringa vulgaris",e:"💜",g:3172218,q:5,season:"Spring",note:"Sweet, powdery, nostalgic",tags:["garden","shrub","spring"],d:"Lilac's heavy, powdery sweetness is the most nostalgic of all garden fragrances — a single whiff transports the senses to a childhood garden. Overwhelming at close range, perfect from a distance."},
+  {n:"Sweet Violet",la:"Viola odorata",e:"💜",g:3033952,q:5,season:"Early spring",note:"Delicate, ionone-rich, fleeting",tags:["wildflower","woodland","spring"],d:"The sweet violet's scent temporarily disables your sense of smell — you catch it, lose it, catch it again. This teasing quality makes it one of the most prized of all floral perfumes."},
+  {n:"English Lavender",la:"Lavandula angustifolia",e:"🪻",g:3172453,q:5,season:"Summer",note:"Clean, camphorous, calming",tags:["herb","mediterranean","garden"],d:"Lavender's clean, slightly medicinal sweetness is the defining scent of English summer. Running your hand through a hedge releases a cloud of calm — clinically proven to reduce anxiety and improve sleep."},
+  {n:"Common Honeysuckle",la:"Lonicera periclymenum",e:"🌸",g:3172678,q:5,season:"Summer evenings",note:"Intensely sweet vanilla, strongest at night",tags:["climber","hedgerow","wildlife"],d:"Honeysuckle saves its best performance for dusk, when its vanilla-sweet fragrance billows out through warm evening air to attract moths. Catching it unexpectedly while walking a country lane is one of summer's great pleasures."},
+  {n:"Lily of the Valley",la:"Convallaria majalis",e:"🌼",g:2757580,q:5,season:"April & May",note:"Fresh, green, intensely floral",tags:["woodland","spring","garden"],d:"One of the finest floral fragrances in the world — clean, green, intensely sweet without being cloying. Its scent is the definition of fresh spring, so prized it remains one of perfumery's most used notes."},
+  {n:"Wisteria",la:"Wisteria sinensis",e:"💜",g:2954348,q:5,season:"May",note:"Sweet, violet-like, intensely floral",tags:["climber","garden","spring"],d:"Wisteria's sweet, violet-tinged fragrance cascading from purple flower clusters in May is among the most intoxicating of all garden scents. A wisteria-covered wall in full bloom seems to perfume an entire street."},
+  {n:"Jasmine",la:"Jasminum officinale",e:"🌸",g:3172488,q:5,season:"Summer",note:"Intensely sweet, indolic, heady",tags:["climber","garden","evening"],d:"Common jasmine's evening fragrance — sweet, heady, slightly narcotic — is the perfume of warm summer nights. One of the world's most-used and most-loved floral fragrances, and for very good reason."},
+  {n:"Night-Scented Stock",la:"Matthiola longipetala",e:"🌸",g:3053272,q:5,season:"Summer nights",note:"Intensely sweet, clove-like",tags:["garden","nocturnal","annual"],d:"Dull and closed by day, night-scented stock saves everything for after dark — its clove-sweet fragrance filling a garden on warm evenings with extraordinary intensity. Plant it beneath a bedroom window."},
+  {n:"Common Lime",la:"Tilia × europaea",e:"🌳",g:2875177,q:5,season:"June & July",note:"Intensely sweet, honeyed blossom",tags:["tree","urban","summer"],d:"In June, lime tree blossom fills avenues with a honey-sweet fragrance so rich it almost makes you dizzy. Standing under a lime tree in full flower, attended by clouds of bees, is an extraordinary sensory experience."},
+  {n:"Sweet Briar Rose",la:"Rosa rubiginosa",e:"🌹",g:3032827,q:4,season:"Spring & summer",note:"Apple-scented leaves, delicate rose flower",tags:["wildflower","hedgerow","rose"],d:"Uniquely, it is the leaves that smell most strongly of apple and honey — released when brushed or after rain. The flowers are soft pink; the whole plant a gift to the senses."},
+  {n:"Common Meadowsweet",la:"Filipendula ulmaria",e:"🌼",g:3036568,q:4,season:"Summer",note:"Sweet almond, hay, and honey",tags:["wildflower","wetland","meadow"],d:"Meadowsweet colonises riverbanks in frothy white clouds whose scent — sweet, almond-tinged, slightly medicinal — hangs over water on summer days. Aspirin was first synthesised from this plant's compounds."},
+  {n:"Dog Rose",la:"Rosa canina",e:"🌹",g:3032856,q:4,season:"June",note:"Delicate, light, classic rose",tags:["wildflower","hedgerow","rose"],d:"The dog rose's delicate scent — lighter and more fleeting than cultivated roses — is the smell of the English hedgerow in June. It requires you to bring your nose close, which makes finding it all the more rewarding."},
+  {n:"Heather",la:"Calluna vulgaris",e:"🌸",g:2876946,q:4,season:"August & September",note:"Honey-sweet, slightly medicinal",tags:["moorland","heathland","late summer"],d:"When the moors turn purple in August, heather releases a warm honey-sweet fragrance across the landscape. Mixed with peaty moorland air, it is the quintessential smell of the British upland summer."},
+  {n:"Elder Flower",la:"Sambucus nigra",e:"🌸",g:2888788,q:4,season:"June",note:"Muscat, sweet, summery",tags:["wildflower","hedgerow","edible"],d:"Elderflower's muscat-sweet fragrance in June hedgerows is one of the most beloved of all British summer smells — so familiar it's been preserved in cordial, champagne, and summer drinks for generations."},
+  {n:"Scots Pine",la:"Pinus sylvestris",e:"🌲",g:5285750,q:4,season:"Year-round",note:"Resinous, clean, woody, medicinal",tags:["tree","forest","year-round"],d:"The smell of a Scots pine forest on a warm day — resinous, clean, faintly medicinal — is one of the most restorative in nature. Breathing it among ancient pines is close to a spiritual experience."},
+  {n:"Rosemary",la:"Salvia rosmarinus",e:"🌿",g:3172463,q:4,season:"Year-round",note:"Piney, camphorous, resinous",tags:["herb","mediterranean","evergreen"],d:"Crushing a sprig of rosemary and inhaling its sharp, piney-camphor fragrance is said to improve memory and concentration. The smell of sun-warmed rosemary carries something of the Mediterranean heat itself."},
+  {n:"Gorse",la:"Ulex europaeus",e:"💛",g:2954391,q:4,season:"Year-round",note:"Warm coconut and vanilla",tags:["heathland","coastal","year-round"],d:"Gorse flowers smell remarkably of warm coconut and vanilla — a rich, tropical sweetness released by sunlit flowers that transforms a winter heath or clifftop walk into something surprisingly sensuous."},
+  {n:"Philadelphus",la:"Philadelphus coronarius",e:"🌸",g:3172198,q:4,season:"June & July",note:"Sweet, orange-blossom like",tags:["garden","shrub","summer"],d:"Mock orange's fragrance is so close to real orange blossom that it forms the backbone of many fine perfumes. In June gardens its heady sweetness can reach you from thirty feet away."},
+  {n:"Water Mint",la:"Mentha aquatica",e:"🌿",g:2929049,q:4,season:"Summer",note:"Fresh, intensely minty, clean",tags:["wetland","wildflower","edible"],d:"Crushing water mint at a streamside releases the freshest, cleanest smell in nature — intensely minty, cool, alive. It is the smell of wild places, of healthy rivers, of summer walks along waterways."},
+  {n:"Bog Myrtle",la:"Myrica gale",e:"🌿",g:2984571,q:4,season:"Summer",note:"Resinous, sweet, aromatic",tags:["wetland","moorland","Scotland"],d:"Bog myrtle releases a powerfully resinous, sweet-aromatic scent when its leaves are brushed — the smell of Highland bogs and moorland edges. Something ancient and wonderful."},
+  {n:"Wild Garlic",la:"Allium ursinum",e:"🌿",g:2856885,q:3,season:"Spring",note:"Pungent garlic, earthy, fresh",tags:["wildflower","woodland","edible"],d:"A carpet of wild garlic in bluebell woods fills the air with an earthy, pungent green fragrance that is the very smell of spring in British woodland — bracing, alive, unmistakable."},
+  {n:"Sweet Pea",la:"Lathyrus odoratus",e:"🌸",g:5402601,q:4,season:"Summer",note:"Honey-rose, delicate, powdery",tags:["garden","climber","annual"],d:"The sweet pea's fragrance — a delicate honey-rose scent that seems to dissolve in warm air — is one of the great pleasures of the summer cutting garden. Old varieties carry it most beautifully."},
+  {n:"Common Hawthorn",la:"Crataegus monogyna",e:"🌸",g:2888808,q:3,season:"May",note:"Heavy, sweet, slightly musky",tags:["hedgerow","wildlife","May"],d:"Hawthorn blossom has a heavy, complex fragrance that is sweet but with an unsettling undertone. Inseparably associated with the English spring, and its smell instantly recalls the countryside in May."},
+  {n:"Sweet Woodruff",la:"Galium odoratum",e:"🌿",g:3085917,q:3,season:"Spring",note:"Hay, vanilla, coumarin",tags:["woodland","ground cover","spring"],d:"Sweet woodruff smells of new-mown hay and vanilla — a soft, dry, warm fragrance that intensifies when dried. It carpets beech woodland floors in spring with a scent that seems to belong to a different, slower age."},
+  {n:"Common Thyme",la:"Thymus vulgaris",e:"🌿",g:5408199,q:3,season:"Summer",note:"Warm, medicinal, herbaceous",tags:["herb","chalk","mediterranean"],d:"Walking barefoot across chalk downland carpeted with wild thyme releases a warm, medicinal fragrance that is the very smell of southern European summer."},
+  {n:"Snowdrop",la:"Galanthus nivalis",e:"🤍",g:5407370,q:3,season:"January & February",note:"Faint honey, almond, delicate",tags:["winter","woodland","bulb"],d:"Snowdrop's scent is faint and requires close attention — a faint honey-almond sweetness from January flowers. That it exists at all, in midwinter, from the coldest of flowers, makes it extraordinary."},
+  {n:"Sweet Cicely",la:"Myrrhis odorata",e:"🌿",g:3034703,q:3,season:"Spring & summer",note:"Aniseed, sweet, fresh",tags:["wildflower","upland","edible"],d:"Sweet cicely smells powerfully of aniseed — fresh, sweet, and clean. Common in northern England and Scotland, it fills roadsides and woodland edges with a faintly exotic fragrance."},
+  {n:"Hazel",la:"Corylus avellana",e:"🌰",g:2876992,q:3,season:"February",note:"Faint honey, subtle pollen",tags:["tree","winter","hedgerow"],d:"Hazel catkins in February carry the first green smell of the turning year — faint, dusty pollen sweetness that tells you, before any other sign, that the cold is beginning to break."},
+  {n:"Meadow Clary",la:"Salvia pratensis",e:"💙",g:3172312,q:3,season:"Summer",note:"Aromatic, slightly balsamic",tags:["wildflower","chalk","rare"],d:"Meadow clary's aromatic, slightly balsamic scent drifts across chalk downland on sunny days — the smell of ancient, unimproved grassland and the butterflies and bees that depend on it."},
+  {n:"Alexanders",la:"Smyrnium olusatrum",e:"🌿",g:3035717,q:3,season:"Spring",note:"Pungent, myrrh-like, spicy",tags:["coastal","wildflower","edible"],d:"Alexanders fills coastal paths in early spring with a pungent, myrrh-like spiciness. A Roman introduction now naturalised on British coasts, its smell is as distinctive as the sound of the sea."},
 ];
 
-function initMap(){
-map = L.map('map').setView([51.5072,-0.1276],10);
+// ── STATE ────────────────────────────────────────────────────
+let lat = null, lon = null, locName = null;
+let currentTab = 'bird';
+let mapFilter = 'all';
+let map, locMarker;
+let birdDots = [], plantDots = [];
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-attribution:'© OpenStreetMap'
-}).addTo(map);
+// ── MAP INIT (immediately on load — key fix) ─────────────────
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([54, -2], 6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Click map to set location
+  map.on('click', async e => {
+    lat = e.latlng.lat; lon = e.latlng.lng;
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+      const d = await r.json();
+      locName = d.address?.city || d.address?.town || d.address?.village || 'Selected location';
+      document.getElementById('loc').value = locName;
+    } catch { locName = 'Selected location'; }
+    placeLocMarker();
+    updateBanner();
+    reloadBadges();
+    showToast('Now exploring ' + locName);
+  });
 }
 
-function updateMap(a,b,label){
-if(!map) initMap();
-
-map.setView([a,b],11);
-
-if(marker) marker.remove();
-
-marker=L.marker([a,b]).addTo(map)
-.bindPopup(label).openPopup();
+function placeLocMarker() {
+  if (!lat || !lon) return;
+  if (locMarker) locMarker.remove();
+  locMarker = L.circleMarker([lat, lon], {
+    radius: 10, fillColor: '#c9a84c', color: '#f3eddc', weight: 2, fillOpacity: 0.95
+  }).bindPopup(`<span style="color:#c9a84c;letter-spacing:1px">${locName || 'Your location'}</span>`)
+    .addTo(map);
 }
 
-function switchTab(t){
-current=t;
-document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-event.target.classList.add("active");
-render();
+// ── LOAD OCCURRENCE DOTS FROM NBN ATLAS ─────────────────────
+async function loadMapPoints() {
+  if (!lat || !lon) { showToast('Search a location first'); return; }
+  const btn = document.getElementById('map-load-btn');
+  btn.disabled = true; btn.textContent = 'Loading…';
+  document.getElementById('map-status').textContent = 'Fetching NBN Atlas records…';
+
+  birdDots.forEach(m => m.remove()); birdDots = [];
+  plantDots.forEach(m => m.remove()); plantDots = [];
+
+  let total = 0;
+
+  async function fetchDots(item, type) {
+    try {
+      // NBN Atlas: search by scientific name, lat/lon/radius (km), return coordinate fields
+      const url = `https://records-ws.nbnatlas.org/occurrences/search?q=species:%22${encodeURIComponent(item.la)}%22&lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&radius=30&pageSize=20&fl=decimalLatitude,decimalLongitude,eventDate,dataResourceName,uuid&sort=eventDate&dir=desc`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const col = type === 'bird' ? '#7ab8d4' : '#7aad8a';
+      const occs = data.occurrences || [];
+      occs.forEach(occ => {
+        if (!occ.decimalLatitude || !occ.decimalLongitude) return;
+        const date = occ.eventDate ? new Date(occ.eventDate).toLocaleDateString('en-GB', {year:'numeric',month:'short',day:'numeric'}) : null;
+        const m = L.circleMarker([occ.decimalLatitude, occ.decimalLongitude], {
+          radius: 5, fillColor: col, color: 'rgba(0,0,0,0.3)', weight: 1, fillOpacity: 0.85
+        }).bindPopup(`
+          <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:${col};margin-bottom:5px">${type === 'bird' ? '🎵 Bird · NBN Atlas' : '🌿 Plant · NBN Atlas'}</div>
+          <div style="font-size:16px;font-family:Cormorant Garamond,serif;font-weight:600;margin-bottom:2px">${item.n}</div>
+          <div style="font-size:11px;font-style:italic;color:#9a9490;margin-bottom:8px">${item.la}</div>
+          ${date ? `<div style="font-size:10px;color:#9a9490">📅 ${date}</div>` : ''}
+          ${occ.dataResourceName ? `<div style="font-size:9px;color:#9a9490;margin-top:3px">📦 ${occ.dataResourceName}</div>` : ''}
+          <a href="https://records.nbnatlas.org/occurrences/${occ.uuid}" target="_blank" style="display:block;margin-top:8px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(201,168,76,0.7);text-decoration:none">View on NBN Atlas ↗</a>
+        `);
+        if (type === 'bird') birdDots.push(m);
+        else plantDots.push(m);
+        total++;
+      });
+    } catch(e) { console.warn('NBN fetch failed for', item.la, e); }
+  }
+
+  await Promise.all([
+    ...BIRDS.slice(0, 8).map(b => fetchDots(b, 'bird')),
+    ...PLANTS.slice(0, 8).map(p => fetchDots(p, 'plant'))
+  ]);
+
+  applyMapFilter();
+  placeLocMarker();
+  map.setView([lat, lon], 11);
+
+  document.getElementById('map-status').textContent =
+    total > 0 ? `${total} NBN records near ${locName}` : `No NBN records found near ${locName}`;
+  btn.disabled = false; btn.textContent = 'Plot occurrences';
+  showToast(`${total} NBN Atlas records plotted`);
 }
 
-function render(){
-const data=current==="birds"?birds:plants;
-const grid=document.getElementById("grid");
-grid.innerHTML="";
-
-data.forEach(async item=>{
-const div=document.createElement("div");
-div.className="card";
-
-div.innerHTML=`
-<h3>${item.name}</h3>
-<div class="latin">${item.latin}</div>
-<div class="desc">${item.desc}</div>
-<div class="meta">${current==="birds"?"🎧 "+item.sound:"🌸 "+item.smell}</div>
-`;
-
-grid.appendChild(div);
-
-try{
-const r=await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${item.gbif}&limit=0`);
-const d=await r.json();
-
-const tag=document.createElement("div");
-tag.style.fontSize="11px";
-tag.style.marginTop="8px";
-tag.style.color="#7aad8a";
-tag.innerText = lat ? `${d.count} nearby records` : `${d.count} global records`;
-
-div.appendChild(tag);
-}catch(e){}
-});
+function setFilter(f) {
+  mapFilter = f;
+  document.getElementById('mf-all').className = 'map-filter' + (f === 'all' ? ' on-all' : '');
+  document.getElementById('mf-bird').className = 'map-filter' + (f === 'bird' ? ' on-bird' : '');
+  document.getElementById('mf-plant').className = 'map-filter' + (f === 'plant' ? ' on-plant' : '');
+  applyMapFilter();
 }
 
-async function searchLocation(){
-const q=document.getElementById("loc").value;
-if(!q)return;
-
-const r=await fetch(`https://us1.locationiq.com/v1/search.php?key=${GEO_KEY}&q=${encodeURIComponent(q)}&format=json`);
-const d=await r.json();
-
-lat=parseFloat(d[0].lat);
-lon=parseFloat(d[0].lon);
-
-document.getElementById("banner").innerText="Showing nature near "+d[0].display_name;
-
-updateMap(lat,lon,d[0].display_name);
-render();
+function applyMapFilter() {
+  if (!map) return;
+  birdDots.forEach(m => (mapFilter === 'all' || mapFilter === 'bird') ? m.addTo(map) : m.remove());
+  plantDots.forEach(m => (mapFilter === 'all' || mapFilter === 'plant') ? m.addTo(map) : m.remove());
 }
 
-function gps(){
-navigator.geolocation.getCurrentPosition(async pos=>{
-lat=pos.coords.latitude;
-lon=pos.coords.longitude;
-
-document.getElementById("banner").innerText="Showing nature near you";
-
-updateMap(lat,lon,"Your location");
-render();
-});
+// ── LOCATION ─────────────────────────────────────────────────
+async function doSearch() {
+  const q = document.getElementById('loc').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true;
+  showToast('Searching…');
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+    const results = await res.json();
+    if (!results.length) { showToast('Place not found'); btn.disabled = false; return; }
+    lat = parseFloat(results[0].lat); lon = parseFloat(results[0].lon);
+    locName = results[0].display_name.split(',').slice(0, 2).join(',').trim();
+    map.setView([lat, lon], 11);
+    placeLocMarker();
+    updateBanner();
+    reloadBadges();
+    showToast('Exploring ' + locName);
+  } catch { showToast('Search failed'); }
+  btn.disabled = false;
 }
 
-initMap();
+function doGPS() {
+  if (!navigator.geolocation) { showToast('Geolocation not supported'); return; }
+  showToast('Finding you…');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    lat = pos.coords.latitude; lon = pos.coords.longitude;
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+      const d = await r.json();
+      locName = d.address?.city || d.address?.town || d.address?.village || 'Your location';
+      document.getElementById('loc').value = locName;
+    } catch { locName = 'Your location'; }
+    map.setView([lat, lon], 12);
+    placeLocMarker();
+    updateBanner();
+    reloadBadges();
+    showToast('Located: ' + locName);
+  }, () => showToast('Could not get location'));
+}
+
+function updateBanner() {
+  if (!locName) return;
+  document.getElementById('banner').innerHTML = `Showing species near <strong>${locName}</strong> — NBN Atlas data`;
+}
+
+function reloadBadges() {
+  BIRDS.forEach((item, i) => setTimeout(() => fetchBadge(item, 'bird', i), i * 60));
+  PLANTS.forEach((item, i) => setTimeout(() => fetchBadge(item, 'plant', i), i * 60));
+}
+
+// ── RENDER CARDS ─────────────────────────────────────────────
+function switchTab(t) {
+  currentTab = t;
+  document.getElementById('tab-bird').className = 'tab' + (t === 'bird' ? ' active-bird' : '');
+  document.getElementById('tab-plant').className = 'tab' + (t === 'plant' ? ' active-plant' : '');
+  render();
+}
+
+function render() {
+  const data = currentTab === 'bird' ? BIRDS : PLANTS;
+  const isBird = currentTab === 'bird';
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  data.forEach((item, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.animationDelay = `${i * 0.04}s`;
+
+    const dots = Array.from({length:5}, (_,j) =>
+      `<div class="qdot${j < item.q ? ' on' : ''}" style="${j < item.q ? `--dot-col:${isBird ? 'var(--blue)' : 'var(--green)'}` : ''}"></div>`
+    ).join('');
+
+    const anim = isBird
+      ? `<span class="card-anim"><span class="wb"></span><span class="wb"></span><span class="wb"></span><span class="wb"></span></span>`
+      : `<span class="card-anim"><span class="sd"></span><span class="sd"></span><span class="sd"></span></span>`;
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="card-emoji">${item.e}</div>
+        <div class="card-right">
+          <div class="card-rank">#${i+1} · ${item.season}</div>
+          <div class="card-name">${item.n}${anim}</div>
+          <div class="card-latin">${item.la}</div>
+        </div>
+      </div>
+      <div class="card-quality">${dots}</div>
+      <div class="card-note">${isBird ? '🎵' : '🌸'} ${item.note}</div>
+      <div class="card-desc">${item.d}</div>
+      <div class="occ-count dim" id="occ-${currentTab}-${i}">Loading NBN Atlas data…</div>
+      <div class="card-footer">
+        <div class="card-tags">${item.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+        <a class="gbif-link" href="https://species.nbnatlas.org/species/${encodeURIComponent(item.la)}" target="_blank">NBN Atlas ↗</a>
+      </div>`;
+
+    grid.appendChild(card);
+    setTimeout(() => fetchBadge(item, currentTab, i), i * 70);
+  });
+}
+
+async function fetchBadge(item, type, i) {
+  const el = document.getElementById(`occ-${type}-${i}`);
+  if (!el) return;
+  try {
+    // NBN Atlas: count by species name, optionally filtered by radius around location
+    let url = `https://records-ws.nbnatlas.org/occurrences/search?q=species:%22${encodeURIComponent(item.la)}%22&pageSize=0`;
+    if (lat && lon) {
+      url += `&lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&radius=30`;
+    }
+    const res = await fetch(url);
+    const data = await res.json();
+    const count = data.totalRecords || 0;
+    if (lat && lon) {
+      el.textContent = count > 0 ? `📍 ${count.toLocaleString()} NBN records within 30km` : '📍 Not recorded nearby';
+      el.className = 'occ-count' + (count > 0 ? '' : ' dim');
+    } else {
+      el.textContent = `🇬🇧 ${count.toLocaleString()} UK NBN Atlas records`;
+      el.className = 'occ-count';
+    }
+  } catch { el.textContent = ''; }
+}
+
+// ── TOAST ────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+initMap();   // ← map created immediately, always visible
 render();
 </script>
-
 </body>
 </html>
