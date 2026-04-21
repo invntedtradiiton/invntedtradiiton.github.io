@@ -4,85 +4,130 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Senses — Bird Song & Botanical Fragrance</title>
+<title>Get Out Into Nearest Nature</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-body {
+:root{
+  --bg:#0f0c1a;
+  --panel:#17122a;
+  --text:#f3eddc;
+  --muted:rgba(243,237,220,0.65);
+  --accent:#c9a84c;
+  --green:#7aad8a;
+  --blue:#7ab8d4;
+}
+
+body{
   margin:0;
-  font-family: Georgia, serif;
-  background:#1a1428;
-  color:#f0ead8;
+  font-family: system-ui, -apple-system, sans-serif;
+  background:var(--bg);
+  color:var(--text);
 }
 
-header {
-  padding:18px;
-  text-align:center;
+/* HEADER */
+header{
+  padding:32px 20px 18px;
+  max-width:900px;
+  margin:auto;
 }
 
-h1 {
-  margin:0;
-  font-weight:300;
+h1{
+  font-size:34px;
+  font-weight:600;
+  margin:0 0 10px;
+  letter-spacing:-0.5px;
 }
 
-.sub {
-  opacity:0.7;
-  font-style:italic;
-  margin-top:6px;
+.subtitle{
+  font-size:15px;
+  line-height:1.6;
+  color:var(--muted);
+  max-width:700px;
 }
 
-#layout {
+/* LAYOUT */
+#layout{
   display:grid;
   grid-template-columns: 1fr 1fr;
-  height: calc(100vh - 120px);
+  height: calc(100vh - 140px);
+  gap:10px;
+  padding:10px;
 }
 
-#map { height:100%; }
+/* MAP */
+#map{
+  border-radius:16px;
+  overflow:hidden;
+}
 
-#grid {
+/* LIST */
+#grid{
   overflow:auto;
-  padding:12px;
+  padding:10px;
 }
 
-.card {
+/* CARD */
+.card{
+  background:var(--panel);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:14px;
   padding:14px;
-  margin-bottom:12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,0.1);
-  background:rgba(255,255,255,0.03);
+  margin-bottom:10px;
+  transition:0.2s ease;
 }
 
-.name {
+.card:hover{
+  transform:translateY(-2px);
+  border-color:rgba(255,255,255,0.12);
+}
+
+.title{
   font-size:16px;
-  font-weight:bold;
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:8px;
 }
 
-.latin {
+.latin{
   font-size:12px;
-  opacity:0.6;
+  opacity:0.5;
+  margin-top:2px;
 }
 
-.meta {
-  font-size:12px;
-  margin-top:6px;
-  opacity:0.8;
+.meta{
+  font-size:13px;
+  color:var(--muted);
+  margin-top:8px;
   line-height:1.4;
 }
 
-button {
+.tag{
+  display:inline-block;
+  font-size:11px;
+  padding:3px 8px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.06);
   margin-top:8px;
-  padding:6px 10px;
-  border-radius:6px;
-  border:none;
-  cursor:pointer;
-  background:#c9a84c;
-  color:#1a1428;
 }
 
-audio {
+/* AUDIO */
+audio{
   width:100%;
-  margin-top:8px;
+  margin-top:10px;
+}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  #layout{
+    grid-template-columns:1fr;
+    height:auto;
+  }
+  #map{
+    height:300px;
+  }
 }
 </style>
 </head>
@@ -90,9 +135,10 @@ audio {
 <body>
 
 <header>
-  <h1>The Senses — Bird Song & Botanical Fragrance</h1>
-  <div class="sub">
-    A sensory field guide. Real species, real places — birds that sing and plants that scent the air.
+  <h1>Get Out Into Nearest Nature</h1>
+  <div class="subtitle">
+    This is a field guide designed to pull you outside — toward the most soothing birdsong and the most fragrant wild flowers near you.
+    Real species from GBIF. Real recordings. Real places waiting to be explored.
   </div>
 </header>
 
@@ -104,62 +150,59 @@ audio {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-/* =========================
-   STATE
-========================= */
 let map;
 let lat = 51.5;
 let lng = -0.1;
 
 /* =========================
-   SPECIES (ENGLISH + LATIN + SENSORY LAYERS)
+   CURATED SPECIES
 ========================= */
 const SPECIES = [
   {
-    english:"Blackbird",
+    name:"🐦 Blackbird",
     latin:"Turdus merula",
-    emoji:"🐦",
     scent:null,
-    soundQuery:"Turdus merula"
+    sound:true,
+    note:"Rich, flute-like dawn song — one of the most calming urban sounds in Britain."
   },
   {
-    english:"Robin",
+    name:"🐦 Robin",
     latin:"Erithacus rubecula",
-    emoji:"🐦",
     scent:null,
-    soundQuery:"Erithacus rubecula"
+    sound:true,
+    note:"Soft, wistful song that carries through gardens even in winter."
   },
   {
-    english:"Skylark",
+    name:"🎵 Skylark",
     latin:"Alauda arvensis",
-    emoji:"🎵",
     scent:null,
-    soundQuery:"Alauda arvensis"
+    sound:true,
+    note:"Continuous rising song high above open fields — pure openness in sound."
   },
   {
-    english:"Common Nightingale",
+    name:"🌙 Nightingale",
     latin:"Luscinia megarhynchos",
-    emoji:"🌙🐦",
     scent:null,
-    soundQuery:"Luscinia megarhynchos"
+    sound:true,
+    note:"Legendary night song — dense, emotional, and deeply immersive."
   },
   {
-    english:"Lavender",
+    name:"🪻 Lavender",
     latin:"Lavandula angustifolia",
-    emoji:"🪻",
-    scent:"Clean, herbal, calming fragrance released when brushed or warmed by sun."
+    scent:"Clean, calming, herbal fragrance that relaxes the nervous system.",
+    sound:false
   },
   {
-    english:"Dog Rose",
+    name:"🌹 Dog Rose",
     latin:"Rosa canina",
-    emoji:"🌹",
-    scent:"Light wild rose scent — subtle, airy, often only noticeable when close."
+    scent:"Light wild rose scent — subtle, best discovered in hedgerows at close range.",
+    sound:false
   },
   {
-    english:"Honeysuckle",
+    name:"🌸 Honeysuckle",
     latin:"Lonicera periclymenum",
-    emoji:"🌸",
-    scent:"Intensely sweet evening fragrance that strengthens at dusk to attract moths."
+    scent:"Sweet, heady evening fragrance that intensifies at dusk.",
+    sound:false
   }
 ];
 
@@ -167,49 +210,45 @@ const SPECIES = [
    MAP INIT
 ========================= */
 function initMap(){
-  map = L.map('map').setView([lat, lng], 10);
+  map = L.map('map').setView([lat,lng],10);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© OpenStreetMap'
   }).addTo(map);
 }
 
 /* =========================
-   GBIF TAXON KEY
+   GBIF
 ========================= */
-async function getTaxonKey(name){
+async function getKey(name){
   const r = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(name)}`);
   const d = await r.json();
   return d.usageKey;
 }
 
-/* =========================
-   OCCURRENCES
-========================= */
-async function getOccurrences(key){
+async function getOcc(key){
   const r = await fetch(
-    `https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&limit=15&decimalLatitude=${lat-1},${lat+1}&decimalLongitude=${lng-1},${lng+1}`
+    `https://api.gbif.org/v1/occurrence/search?taxonKey=${key}&limit=12&decimalLatitude=${lat-1},${lat+1}&decimalLongitude=${lng-1},${lng+1}`
   );
   const d = await r.json();
   return d.results || [];
 }
 
 /* =========================
-   XENO-CANTO BIRD SOUND
+   AUDIO (XENO-CANTO)
 ========================= */
-async function getBirdAudio(latin){
-  try {
+async function getAudio(latin){
+  try{
     const r = await fetch(`https://xeno-canto.org/api/2/recordings?query=${latin}`);
     const d = await r.json();
-    if(d.recordings && d.recordings.length){
-      return d.recordings[0].file;
-    }
-  } catch {}
-  return null;
+    return d.recordings?.[0]?.file || null;
+  } catch {
+    return null;
+  }
 }
 
 /* =========================
-   LOAD
+   LOAD UI
 ========================= */
 async function load(){
 
@@ -226,50 +265,48 @@ async function load(){
     card.className = "card";
 
     card.innerHTML = `
-      <div class="name">${s.emoji} ${s.english}</div>
+      <div class="title">${s.name}</div>
       <div class="latin">${s.latin}</div>
-      <div class="meta">${s.scent ? "🌸 " + s.scent : "🎵 Searching for song..."}</div>
-      <div class="meta loading">Loading GBIF...</div>
+      <div class="meta">${s.note || ""}</div>
+      <div class="meta">${s.scent ? "🌸 " + s.scent : "🎧 Loading soundscape..."}</div>
+      <div class="meta">Loading nearby nature data…</div>
     `;
 
     grid.appendChild(card);
 
-    const key = await getTaxonKey(s.latin);
-
+    const key = await getKey(s.latin);
     if(!key){
-      card.querySelector(".loading").textContent = "Not found in GBIF";
+      card.querySelectorAll(".meta")[1].textContent = "Not found in GBIF";
       continue;
     }
 
-    const occ = await getOccurrences(key);
+    const occ = await getOcc(key);
 
-    card.querySelector(".loading").textContent =
-      `${occ.length} local GBIF records`;
+    card.querySelectorAll(".meta")[1].textContent =
+      `${occ.length} nearby records`;
 
-    /* MAP */
     occ.forEach(o=>{
       if(o.decimalLatitude && o.decimalLongitude){
-        L.marker([o.decimalLatitude, o.decimalLongitude])
+        L.marker([o.decimalLatitude,o.decimalLongitude])
           .addTo(map)
-          .bindPopup(`${s.english}`);
+          .bindPopup(s.name);
       }
     });
 
-    /* AUDIO (birds only) */
-    if(s.soundQuery){
+    if(s.sound){
 
-      const audioUrl = await getBirdAudio(s.soundQuery);
+      const audioUrl = await getAudio(s.latin);
 
       if(audioUrl){
-        const audio = document.createElement("audio");
-        audio.controls = true;
-        audio.src = audioUrl;
-        card.appendChild(audio);
+        const a = document.createElement("audio");
+        a.controls = true;
+        a.src = audioUrl;
+        card.appendChild(a);
       } else {
-        const note = document.createElement("div");
-        note.className = "meta";
-        note.textContent = "No audio found";
-        card.appendChild(note);
+        const m = document.createElement("div");
+        m.className="meta";
+        m.textContent="No recording found";
+        card.appendChild(m);
       }
     }
   }
