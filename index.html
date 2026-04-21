@@ -1,144 +1,140 @@
-<script>
-document.addEventListener("DOMContentLoaded", () => {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Biodiversity Explorer</title>
 
-/* ================= API ================= */
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#1a1428;
+  color:white;
+}
+
+#top {
+  padding:10px;
+  text-align:center;
+}
+
+#map {
+  height:50vh;
+  width:100%;
+}
+
+#grid {
+  padding:10px;
+  display:grid;
+  gap:10px;
+}
+
+.card {
+  padding:10px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px;
+}
+button, input { padding:8px; }
+</style>
+</head>
+
+<body>
+
+<div id="top">
+  <h3>Biodiversity Explorer</h3>
+  <input id="loc" placeholder="Search location">
+  <button onclick="search()">Search</button>
+  <button onclick="gps()">📍</button>
+</div>
+
+<div id="map"></div>
+<div id="grid"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
 const KEY = "pk.20035ccf65b5e38e8e2a1e986fc979f4";
 
-/* ================= STATE ================= */
+let map;
 let lat = 51.5;
 let lng = -0.1;
-let type = "bird";
-let map;
-let markers = [];
-let cache = {};
 
-/* ================= DATA ================= */
-const DATA = {
-  bird: [
-    { name:"Blackbird", id:5789749 },
-    { name:"Robin", id:2492295 },
-    { name:"Skylark", id:2491576 }
-  ],
-  plant: [
-    { name:"Lavender", id:3172453 },
-    { name:"Rose", id:3032856 },
-    { name:"Heather", id:2876946 }
-  ]
-};
+const DATA = [
+  { name:"Blackbird", id:5789749 },
+  { name:"Robin", id:2492295 },
+  { name:"Lavender", id:3172453 }
+];
 
-/* ================= MAP INIT ================= */
-function initMap(){
-  map = L.map('map', {
-    zoomControl: true
-  }).setView([lat, lng], 10);
+/* ================= SAFE INIT ================= */
+function init(){
+  map = L.map('map').setView([lat,lng], 10);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap'
   }).addTo(map);
+
+  render();
 }
 
-/* ================= FIX CLICK ISSUE (IMPORTANT) ================= */
-function fixMapClickBlocking(){
-  const mapEl = document.getElementById("map");
-  mapEl.style.pointerEvents = "auto";
-  mapEl.style.zIndex = "1";
-}
-
-/* ================= MARKERS ================= */
-function clearMarkers(){
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-}
-
-/* ================= LOAD ================= */
-async function load(){
+/* ================= RENDER ================= */
+async function render(){
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
-  clearMarkers();
 
-  for(const item of DATA[type]){
+  for(const item of DATA){
 
-    const key = `${item.id}-${lat.toFixed(2)}-${lng.toFixed(2)}`;
+    let count = 0;
 
-    let count;
-    if(cache[key]){
-      count = cache[key];
-    } else {
-      const url =
-        `https://api.gbif.org/v1/occurrence/search?taxonKey=${item.id}&limit=0&decimalLatitude=${lat-0.5},${lat+0.5}&decimalLongitude=${lng-0.5},${lng+0.5}`;
-
+    try {
+      const url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${item.id}&limit=0`;
       const res = await fetch(url);
       const data = await res.json();
       count = data.count || 0;
-      cache[key] = count;
+    } catch(e){
+      console.log(e);
     }
 
     const div = document.createElement("div");
     div.className = "card";
-    div.innerHTML = `<b>${item.name}</b><br>${count.toLocaleString()} records`;
+    div.innerHTML = `<b>${item.name}</b><br>${count} records`;
     grid.appendChild(div);
-
-    if(count > 0){
-      const marker = L.marker([
-        lat + (Math.random()-0.5)*0.3,
-        lng + (Math.random()-0.5)*0.3
-      ])
-      .addTo(map)
-      .bindPopup(`${item.name}<br>${count} records`);
-
-      markers.push(marker);
-    }
   }
 }
 
-/* ================= TAB ================= */
-window.setType = function(t){
-  type = t;
-  load();
-};
-
-/* ================= LOCATION ================= */
-window.search = async function(){
+/* ================= LOCATIONIQ ================= */
+async function search(){
   const q = document.getElementById("loc").value;
-  if(!q) return;
-
-  toast("Searching...");
 
   const res = await fetch(
-    `https://us1.locationiq.com/v1/search.php?key=${KEY}&q=${encodeURIComponent(q)}&format=json`
+    `https://us1.locationiq.com/v1/search.php?key=${KEY}&q=${q}&format=json`
   );
 
   const data = await res.json();
-  if(!data.length) return toast("Not found");
+  if(!data.length) return alert("Not found");
 
   lat = parseFloat(data[0].lat);
   lng = parseFloat(data[0].lon);
 
-  map.setView([lat, lng], 10);
-  load();
-};
+  map.setView([lat,lng], 10);
+  render();
+}
 
-window.gps = function(){
-  navigator.geolocation.getCurrentPosition(async p=>{
+/* ================= GPS ================= */
+function gps(){
+  navigator.geolocation.getCurrentPosition(p=>{
     lat = p.coords.latitude;
     lng = p.coords.longitude;
-    map.setView([lat, lng], 10);
-    load();
+    map.setView([lat,lng], 10);
+    render();
   });
-};
-
-/* ================= TOAST ================= */
-function toast(msg){
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
 }
 
 /* ================= START ================= */
-initMap();
-fixMapClickBlocking();
-load();
-
-});
+init();
 </script>
+
+</body>
+</html>
